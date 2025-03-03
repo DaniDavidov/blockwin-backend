@@ -2,14 +2,15 @@ package com.blockwin.protocol_api.service;
 
 import com.blockwin.protocol_api.model.dto.LoginRequest;
 import com.blockwin.protocol_api.model.dto.RegisterRequest;
-import com.blockwin.protocol_api.model.dto.Response;
 import com.blockwin.protocol_api.model.dto.UserDTO;
+import com.blockwin.protocol_api.model.entity.CacheData;
 import com.blockwin.protocol_api.model.entity.UserEntity;
-import com.blockwin.protocol_api.model.entity.UserRoleEntity;
 import com.blockwin.protocol_api.model.entity.enums.UserRoleEnum;
 import com.blockwin.protocol_api.model.error.UserNotFoundException;
+import com.blockwin.protocol_api.repository.CacheDataRepository;
 import com.blockwin.protocol_api.repository.UserRepository;
 import com.blockwin.protocol_api.repository.UserRoleRepository;
+import com.blockwin.protocol_api.utils.UserStringMapper;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.User;
@@ -23,13 +24,15 @@ import java.util.*;
 @Service
 public class UserService {
     private final UserRepository userRepository;
+    private final CacheDataRepository cacheDataRepository;
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
 
-    public UserService(UserRepository userRepository, UserRoleRepository userRoleRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, JwtService jwtService) {
+    public UserService(UserRepository userRepository, CacheDataRepository cacheDataRepository, UserRoleRepository userRoleRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, JwtService jwtService) {
         this.userRepository = userRepository;
+        this.cacheDataRepository = cacheDataRepository;
         this.userRoleRepository = userRoleRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
@@ -59,7 +62,13 @@ public class UserService {
         );
         UserEntity userEntity = this.userRepository.findByEmail(request.email()).orElseThrow(() -> new UsernameNotFoundException(request.email()));
 
+        this.cacheDataRepository.save(new CacheData(userEntity.getEmail(), UserStringMapper.map(userEntity)));
+
         return this.jwtService.generateToken(new User(userEntity.getEmail(), userEntity.getPassword(), new ArrayList<>()));
+    }
+
+    public void logout(LoginRequest request) {
+        // TODO implement logout logic
     }
 
     public UserDTO getUserById(Long id) {

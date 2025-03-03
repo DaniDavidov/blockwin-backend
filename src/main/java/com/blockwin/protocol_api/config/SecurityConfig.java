@@ -1,6 +1,6 @@
 package com.blockwin.protocol_api.config;
 
-import com.blockwin.protocol_api.model.entity.enums.UserRoleEnum;
+import com.blockwin.protocol_api.repository.CacheDataRepository;
 import com.blockwin.protocol_api.repository.UserRepository;
 import com.blockwin.protocol_api.service.CustomUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,11 +26,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
     private final UserRepository userRepository;
+    private final CacheDataRepository cacheDataRepository;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Autowired
-    public SecurityConfig(UserRepository userRepository, @Lazy JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(UserRepository userRepository, CacheDataRepository cacheDataRepository, @Lazy JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.userRepository = userRepository;
+        this.cacheDataRepository = cacheDataRepository;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
@@ -49,7 +51,7 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
-        return new CustomUserDetailsService(this.userRepository);
+        return new CustomUserDetailsService(this.userRepository, this.cacheDataRepository);
     }
 
     @Bean
