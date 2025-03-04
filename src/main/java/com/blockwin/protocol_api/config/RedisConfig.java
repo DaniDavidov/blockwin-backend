@@ -11,7 +11,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 
 @Configuration
-@EnableRedisRepositories(value = "com.blockwin.protocol_api.repositories")
+@EnableRedisRepositories(value = "com.blockwin.protocol_api.repository")
 public class RedisConfig {
 
     @Bean

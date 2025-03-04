@@ -1,5 +1,6 @@
 package com.blockwin.protocol_api.config;
 
+import com.blockwin.protocol_api.repository.TokenRepository;
 import com.blockwin.protocol_api.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -24,12 +25,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final HandlerExceptionResolver handlerExceptionResolver;
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final TokenRepository tokenRepository;
 
     @Autowired
-    public JwtAuthenticationFilter(HandlerExceptionResolver handlerExceptionResolver, JwtService jwtService, UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(
+            HandlerExceptionResolver handlerExceptionResolver,
+            JwtService jwtService,
+            UserDetailsService userDetailsService,
+            TokenRepository tokenRepository
+    ) {
         this.handlerExceptionResolver = handlerExceptionResolver;
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
+        this.tokenRepository = tokenRepository;
     }
 
     @Override
@@ -52,8 +60,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (userEmail != null && authentication == null) {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+            Boolean isValid = this.tokenRepository.findByToken(token)
+                    .map(jwt -> !jwt.isExpired() && !jwt.isRevoked())
+                    .orElse(false);
 
-            if (jwtService.isValid(token, userDetails)) {
+            if (jwtService.isValid(token, userDetails) && isValid) {
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities()
                 );

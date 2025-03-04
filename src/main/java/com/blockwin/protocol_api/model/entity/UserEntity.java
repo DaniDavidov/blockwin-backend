@@ -1,17 +1,17 @@
 package com.blockwin.protocol_api.model.entity;
 
 
+import com.blockwin.protocol_api.token.Token;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 
+@Builder
 @Getter
 @Setter
 @NoArgsConstructor
@@ -45,4 +45,7 @@ public class UserEntity extends BaseEntity {
 
     @ManyToMany(fetch = FetchType.EAGER)
     private Set<UserRoleEntity> userRoles;
+
+    @OneToMany(mappedBy = "user", targetEntity = Token.class, fetch = FetchType.EAGER)
+    private List<Token> tokens;
 }

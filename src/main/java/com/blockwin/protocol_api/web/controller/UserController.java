@@ -1,5 +1,6 @@
 package com.blockwin.protocol_api.web.controller;
 
+import com.blockwin.protocol_api.model.dto.AuthenticationResponse;
 import com.blockwin.protocol_api.model.dto.LoginRequest;
 import com.blockwin.protocol_api.model.dto.RegisterRequest;
 import com.blockwin.protocol_api.model.dto.UserDTO;
@@ -18,12 +19,12 @@ public class UserController {
     }
 
     @PostMapping("/api/v1/auth/login")
-    public ResponseEntity<String> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<AuthenticationResponse> login(@RequestBody LoginRequest loginRequest) {
         return ResponseEntity.ok(this.userService.login(loginRequest));
     }
 
     @PostMapping("/api/v1/auth/register")
-    public ResponseEntity<Long> register(@RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<AuthenticationResponse> register(@RequestBody RegisterRequest registerRequest) {
         return ResponseEntity.ok(this.userService.register(registerRequest));
     }
 

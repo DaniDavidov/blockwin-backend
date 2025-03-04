@@ -16,11 +16,13 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.logout.LogoutHandler;
 
 @Configuration
 @EnableWebSecurity
@@ -28,12 +30,19 @@ public class SecurityConfig {
     private final UserRepository userRepository;
     private final CacheDataRepository cacheDataRepository;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final LogoutHandler logoutHandler;
 
     @Autowired
-    public SecurityConfig(UserRepository userRepository, CacheDataRepository cacheDataRepository, @Lazy JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(
+            UserRepository userRepository,
+            CacheDataRepository cacheDataRepository,
+            @Lazy JwtAuthenticationFilter jwtAuthenticationFilter,
+            LogoutHandler logoutHandler
+    ) {
         this.userRepository = userRepository;
         this.cacheDataRepository = cacheDataRepository;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.logoutHandler = logoutHandler;
     }
 
     @Bean
@@ -45,7 +54,16 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .logout(logout ->
+                        logout.logoutUrl("/api/v1/auth/logout")
+                        .addLogoutHandler(logoutHandler)
+                        .logoutSuccessHandler(
+                                (request, response, authentication) ->
+                                        SecurityContextHolder.clearContext()
+                        )
+                );
+
         return http.build();
     }
 

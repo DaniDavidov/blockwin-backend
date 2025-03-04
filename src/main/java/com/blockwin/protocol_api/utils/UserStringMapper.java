@@ -4,10 +4,15 @@ package com.blockwin.protocol_api.utils;
 import com.blockwin.protocol_api.model.entity.UserEntity;
 import com.blockwin.protocol_api.model.entity.UserRoleEntity;
 import com.blockwin.protocol_api.model.entity.enums.UserRoleEnum;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -41,5 +46,24 @@ public class UserStringMapper {
                 .collect(Collectors.toSet());
         userEntity.setUserRoles(roles);
         return userEntity;
+    }
+
+    public static UserDetails mapToUserDetails(UserEntity userEntity) {
+        return new User(
+                userEntity.getEmail(),
+                userEntity.getPassword(),
+                extractAuthorities(userEntity)
+        );
+    }
+
+    private static List<GrantedAuthority> extractAuthorities(UserEntity userEntity) {
+        return userEntity.getUserRoles()
+                .stream()
+                .map(UserStringMapper::mapRole)
+                .toList();
+    }
+
+    private static GrantedAuthority mapRole(UserRoleEntity role) {
+        return new SimpleGrantedAuthority("ROLE_" + role.getName().name());
     }
 }

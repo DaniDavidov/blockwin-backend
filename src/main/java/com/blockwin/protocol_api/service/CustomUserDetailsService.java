@@ -16,6 +16,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import java.util.List;
 import java.util.Optional;
 
+import static com.blockwin.protocol_api.utils.UserStringMapper.mapToUserDetails;
+
 public class CustomUserDetailsService implements UserDetailsService {
     private final UserRepository userRepository;
     private final CacheDataRepository cacheDataRepository;
@@ -34,26 +36,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         }
         return this.userRepository
                 .findByEmail(email)
-                .map(this::mapToUserDetails)
+                .map(UserStringMapper::mapToUserDetails)
                 .orElseThrow(() -> new UsernameNotFoundException(email));
-    }
-
-    private UserDetails mapToUserDetails(UserEntity userEntity) {
-        return new User(
-                userEntity.getEmail(),
-                userEntity.getPassword(),
-                extractAuthorities(userEntity)
-        );
-    }
-
-    private List<GrantedAuthority> extractAuthorities(UserEntity userEntity) {
-        return userEntity.getUserRoles()
-                .stream()
-                .map(this::mapRole)
-                .toList();
-    }
-
-    private GrantedAuthority mapRole(UserRoleEntity role) {
-        return new SimpleGrantedAuthority("ROLE_" + role.getName().name());
     }
 }
