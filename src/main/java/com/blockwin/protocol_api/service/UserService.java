@@ -94,10 +94,6 @@ public class UserService {
         return AuthenticationResponse.builder().userId(userEntity.getId()).token(savedToken.getToken()).build();
     }
 
-    public void logout(LoginRequest request) {
-        // TODO implement logout logic
-    }
-
     public UserDTO getUserById(Long id) {
         UserEntity userEntity = this.userRepository.findById(id).orElseThrow(UserNotFoundException::new);
         return new UserDTO(
