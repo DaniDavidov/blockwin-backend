@@ -29,14 +29,33 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        Optional<CacheData> cachedUser = this.cacheDataRepository.findById(email);
-        if (cachedUser.isPresent()) {
-            UserDetails userDetails = mapToUserDetails(UserStringMapper.map(cachedUser.get().getValue()));
-            return userDetails;
-        }
+//        Optional<CacheData> cachedUser = this.cacheDataRepository.findById(email);
+//        if (cachedUser.isPresent()) {
+//            UserDetails userDetails = mapToUserDetails(UserStringMapper.map(cachedUser.get().getValue()));
+//            return userDetails;
+//        }
         return this.userRepository
                 .findByEmail(email)
-                .map(UserStringMapper::mapToUserDetails)
+                .map(this::mapToUserDetails)
                 .orElseThrow(() -> new UsernameNotFoundException(email));
+    }
+
+    public UserDetails mapToUserDetails(UserEntity userEntity) {
+        return new User(
+                userEntity.getEmail(),
+                userEntity.getPassword(),
+                extractAuthorities(userEntity)
+        );
+    }
+
+    private List<GrantedAuthority> extractAuthorities(UserEntity userEntity) {
+        return userEntity.getUserRoles()
+                .stream()
+                .map(this::mapRole)
+                .toList();
+    }
+
+    private GrantedAuthority mapRole(UserRoleEntity role) {
+        return new SimpleGrantedAuthority("ROLE_" + role.getName().name());
     }
 }
