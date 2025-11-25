@@ -1,6 +1,7 @@
 package com.blockwin.protocol_api.model.entity;
 
 
+import com.blockwin.protocol_api.config.AESEncryptor;
 import com.blockwin.protocol_api.token.Token;
 import jakarta.persistence.*;
 import lombok.*;
@@ -33,6 +34,7 @@ public class UserEntity extends BaseEntity {
     private String lastName;
 
     @Column(name = "phone_number")
+    @Convert(converter = AESEncryptor.class)
     private String phoneNumber;
 
     @CreationTimestamp
