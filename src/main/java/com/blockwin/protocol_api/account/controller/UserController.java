@@ -8,6 +8,8 @@ import com.blockwin.protocol_api.account.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/v1")
 @CrossOrigin(origins = "*")
@@ -29,12 +31,12 @@ public class UserController {
     }
 
     @PostMapping("/users/update")
-    public ResponseEntity<AuthenticationResponse> updateUser(@RequestParam("id") Long id, @RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<AuthenticationResponse> updateUser(@RequestParam("id") UUID id, @RequestBody RegisterRequest registerRequest) {
         return ResponseEntity.ok(this.userService.updateUser(id, registerRequest));
     }
 
     @GetMapping("/users")
-    public ResponseEntity<UserDTO> getUser(@RequestParam("id") Long id) {
+    public ResponseEntity<UserDTO> getUser(@RequestParam("id") UUID id) {
          return ResponseEntity.ok(this.userService.getUserById(id));
     }
 

@@ -7,15 +7,16 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface TokenRepository extends CrudRepository<Token, Long> {
+public interface TokenRepository extends CrudRepository<Token, UUID> {
 
     @Query("""
     select t from Token t inner join t.user u on t.user.id = u.id
     where u.id = :userId and (t.expired = false and t.revoked = false)
 """)
-    List<Token> findAllValidTokenByUser(Long userId);
+    List<Token> findAllValidTokenByUser(UUID userId);
 
     Optional<Token> findByToken(String token);
 

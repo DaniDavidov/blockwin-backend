@@ -82,7 +82,7 @@ public class UserService {
         );
         UserEntity userEntity = this.userRepository.findByEmail(request.email()).orElseThrow(() -> new UsernameNotFoundException(request.email()));
 
-        this.cacheDataRepository.save(new CacheData(userEntity.getEmail(), UserStringMapper.map(userEntity)));
+//        this.cacheDataRepository.save(new CacheData(userEntity.getEmail(), UserStringMapper.map(userEntity)));
 
         List<Token> validTokens = this.tokenRepository.findAllValidTokenByUser(userEntity.getId());
         if (!validTokens.isEmpty()) {
@@ -94,7 +94,7 @@ public class UserService {
         return AuthenticationResponse.builder().userId(userEntity.getId()).token(savedToken.getToken()).build();
     }
 
-    public AuthenticationResponse updateUser(Long id, RegisterRequest request) {
+    public AuthenticationResponse updateUser(UUID id, RegisterRequest request) {
         UserEntity userEntity = this.userRepository
                 .findById(id)
                 .orElseThrow(() -> new UsernameNotFoundException(request.email()));
@@ -126,7 +126,7 @@ public class UserService {
                 .token(savedJwtToken.getToken()).build();
     }
 
-    public UserDTO getUserById(Long id) {
+    public UserDTO getUserById(UUID id) {
         UserEntity userEntity = this.userRepository.findById(id).orElseThrow(UserNotFoundException::new);
         return new UserDTO(
                 userEntity.getEmail(),
@@ -145,5 +145,9 @@ public class UserService {
                 .user(user)
                 .build();
         return this.tokenRepository.save(jwtEntity);
+    }
+
+    public UserEntity getByUsername(String email) {
+        return this.userRepository.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException(email));
     }
 }
