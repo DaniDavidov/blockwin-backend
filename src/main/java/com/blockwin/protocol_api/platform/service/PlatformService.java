@@ -9,6 +9,9 @@ import com.blockwin.protocol_api.platform.model.dto.RegisterPlatformResponse;
 import com.blockwin.protocol_api.platform.model.error.PlatformNotFoundException;
 import com.blockwin.protocol_api.platform.repository.PlatformRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -21,7 +24,10 @@ public class PlatformService {
     private final PlatformRepository platformRepository;
 
     public RegisterPlatformResponse registerPlatform(RegisterPlatformRequest registerRequest) {
-        UserEntity user = userService.getByUsername(registerRequest.userEmail());
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails principal = (UserDetails) authentication.getPrincipal();
+
+        UserEntity user = userService.getByUsername(principal.getUsername());
         PlatformEntity platform = PlatformEntity.builder()
                 .owner(user)
                 .url(registerRequest.url())
