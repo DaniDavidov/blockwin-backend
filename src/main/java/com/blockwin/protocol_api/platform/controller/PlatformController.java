@@ -24,14 +24,14 @@ public class PlatformController {
         return ResponseEntity.ok().body(response);
     }
 
-    @PutMapping("{id}/update")
-    public ResponseEntity<RegisterPlatformResponse> updatePlatform(@PathVariable UUID id, @RequestBody RegisterPlatformRequest registerRequest) {
+    @PostMapping("/update")
+    public ResponseEntity<RegisterPlatformResponse> updatePlatform(@RequestParam("id") UUID id, @RequestBody RegisterPlatformRequest registerRequest) {
         RegisterPlatformResponse response = platformService.updatePlatform(id, registerRequest);
         return ResponseEntity.ok().body(response);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<PlatformDTO> getPlatform(@PathVariable UUID id) {
+    @GetMapping
+    public ResponseEntity<PlatformDTO> getPlatform(@RequestParam("id") UUID id) {
         return ResponseEntity.ok().body(this.platformService.getById(id));
     }
 
