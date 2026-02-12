@@ -82,7 +82,7 @@ public class UserService {
         );
         UserEntity userEntity = this.userRepository.findByEmail(request.email()).orElseThrow(() -> new UsernameNotFoundException(request.email()));
 
-//        this.cacheDataRepository.save(new CacheData(userEntity.getEmail(), UserStringMapper.map(userEntity)));
+        this.cacheDataRepository.save(new CacheData(userEntity.getEmail(), UserStringMapper.map(userEntity)));
 
         List<Token> validTokens = this.tokenRepository.findAllValidTokenByUser(userEntity.getId());
         if (!validTokens.isEmpty()) {

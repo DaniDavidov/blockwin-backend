@@ -1,9 +1,11 @@
 package com.blockwin.protocol_api.account.service;
 
+import com.blockwin.protocol_api.account.model.entity.CacheData;
 import com.blockwin.protocol_api.account.model.entity.UserEntity;
 import com.blockwin.protocol_api.account.model.entity.UserRoleEntity;
 import com.blockwin.protocol_api.account.repository.CacheDataRepository;
 import com.blockwin.protocol_api.account.repository.UserRepository;
+import com.blockwin.protocol_api.common.utils.UserStringMapper;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
@@ -12,6 +14,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.List;
+import java.util.Optional;
 
 public class CustomUserDetailsService implements UserDetailsService {
     private final UserRepository userRepository;
@@ -24,11 +27,10 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-//        Optional<CacheData> cachedUser = this.cacheDataRepository.findById(email);
-//        if (cachedUser.isPresent()) {
-//            UserDetails userDetails = mapToUserDetails(UserStringMapper.map(cachedUser.get().getValue()));
-//            return userDetails;
-//        }
+        Optional<CacheData> cachedUser = this.cacheDataRepository.findById(email);
+        if (cachedUser.isPresent()) {
+            return mapToUserDetails(UserStringMapper.map(cachedUser.get().getValue()));
+        }
         return this.userRepository
                 .findByEmail(email)
                 .map(this::mapToUserDetails)
