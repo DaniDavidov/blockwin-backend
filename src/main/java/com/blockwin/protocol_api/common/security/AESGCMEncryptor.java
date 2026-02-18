@@ -13,21 +13,14 @@ public class AESGCMEncryptor {
     private static final int GCM_TAG_LENGTH = 128; // bits
     private static final int IV_LENGTH = 12; // bytes - recommended for GCM
 
-    private final SecretKey secretKey;
-
-    public AESGCMEncryptor(String base64SecretKey) {
-        byte[] keyBytes = Base64.getDecoder().decode(base64SecretKey);
-        this.secretKey = new SecretKeySpec(keyBytes, 0, keyBytes.length, "AES");
-    }
-
-
-    public String encrypt(String plaintext) {
+    public static String encrypt(String base64SecretKey, String plaintext) {
+        SecretKey secretKey = getSecretKey(base64SecretKey);
         try {
             byte[] iv = SecureRandomUtil.randomBytes(IV_LENGTH);
 
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-            cipher.init(Cipher.ENCRYPT_MODE, this.secretKey, spec);
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey, spec);
 
             byte[] encrypted = cipher.doFinal(plaintext.getBytes());
 
@@ -39,7 +32,8 @@ public class AESGCMEncryptor {
         }
     }
 
-    public String decrypt(String ciphertext) {
+    public static String decrypt(String base64SecretKey, String ciphertext) {
+        SecretKey secretKey = getSecretKey(base64SecretKey);
         try {
             byte[] decoded = Base64.getDecoder().decode(ciphertext);
 
@@ -48,12 +42,17 @@ public class AESGCMEncryptor {
 
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-            cipher.init(Cipher.DECRYPT_MODE, this.secretKey, spec);
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, spec);
 
             return new String(cipher.doFinal(encrypted));
 
         } catch (Exception e) {
             throw new RuntimeException("AES-GCM decryption failed", e);
         }
+    }
+
+    private static SecretKey getSecretKey(String base64SecretKey) {
+        byte[] keyBytes = Base64.getDecoder().decode(base64SecretKey);
+        return new SecretKeySpec(keyBytes, 0, keyBytes.length, "AES");
     }
 }
