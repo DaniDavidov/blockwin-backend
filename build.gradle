@@ -30,6 +30,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
 	implementation "org.springframework.kafka:spring-kafka:4.0.2"
+	implementation("org.web3j:crypto:4.10.3")
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'org.postgresql:postgresql'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
