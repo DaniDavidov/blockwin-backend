@@ -1,0 +1,39 @@
+blockchain:
+    chains:
+        ethereum:
+            chain-id: 31337
+            required-confirmations: 1
+            rpc-url: http://127.0.0.1:8545
+            staking-contract: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+security:
+    aes:
+        secret-key: ${AES_SECRET_KEY}
+    jwt:
+        expiration-time: 3600000
+        secret-key: ${HASH_SEC_KEY}
+server:
+    port: 8080
+spring:
+    application:
+        name: protocol-api
+    config:
+        import: env.properties
+    data:
+        redis:
+            host: localhost
+            port: 6379
+    datasource:
+        password: ${DATABASE_PASS}
+        url: jdbc:postgresql://localhost:5432/blockwin
+        username: postgres
+    jpa:
+        defer-datasource-initialization: true
+        hibernate:
+            ddl-auto: create-drop
+        open-in-view: false
+        properties:
+            hibernate:
+                dialect: org.hibernate.dialect.PostgreSQLDialect
+    sql:
+        init:
+            mode: always

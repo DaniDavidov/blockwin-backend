@@ -8,11 +8,11 @@ public record RegisterValidatorRequest(
         String ipAddress,
         String continent,
         String country,
-        UUID validatorChainUuid,
         String chainId,
-        ChainName chainName,
+        String chainName,
         String publicKey,
         String txHash,
-        String signedMessage,
+        String message,
+        String signature,
         Integer capacity
 ) {}

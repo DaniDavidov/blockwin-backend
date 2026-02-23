@@ -1,4 +1,4 @@
-package com.blockwin.protocol_api.validator.service;
+package com.blockwin.protocol_api.blockchain.service;
 
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;

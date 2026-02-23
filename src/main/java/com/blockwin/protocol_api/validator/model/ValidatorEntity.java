@@ -18,7 +18,6 @@ import java.util.UUID;
 public class ValidatorEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID uuid;
 
     @Column(name = "ip_address", nullable = false, length = 45)
