@@ -2,6 +2,7 @@ package com.blockwin.protocol_api.validator.model;
 
 import com.blockwin.protocol_api.validator.model.enums.Continent;
 import com.blockwin.protocol_api.validator.model.enums.Country;
+import com.blockwin.protocol_api.validator.model.enums.ValidatorStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -28,6 +29,9 @@ public class ValidatorEntity {
 
     @Enumerated(EnumType.STRING)
     private Country country;
+
+    @Enumerated(EnumType.STRING)
+    private ValidatorStatus status;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;

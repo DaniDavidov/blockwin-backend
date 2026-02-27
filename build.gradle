@@ -28,6 +28,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
 	implementation "org.springframework.kafka:spring-kafka:4.0.2"
 	implementation("org.web3j:crypto:4.10.3")
