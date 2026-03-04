@@ -15,7 +15,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @AllArgsConstructor
 @Service
@@ -55,5 +57,9 @@ public class PlatformService {
 
     private PlatformDTO mapToDTO(PlatformEntity platform) {
         return new PlatformDTO(platform.getUrl(), platform.getCheckIntervalSeconds());
+    }
+
+    public List<PlatformDTO> getAllPlatforms() {
+        return platformRepository.findAll().stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 }
