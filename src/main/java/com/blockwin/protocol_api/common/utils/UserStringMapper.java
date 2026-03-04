@@ -9,6 +9,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
@@ -37,8 +38,8 @@ public class UserStringMapper {
         userEntity.setFirstName(tokens[2]);
         userEntity.setLastName(tokens[3]);
         userEntity.setPhoneNumber(tokens[4]);
-        userEntity.setCreatedAt(LocalDate.parse(tokens[5]));
-        userEntity.setUpdatedAt(LocalDate.parse(tokens[6]));
+        userEntity.setCreatedAt(Instant.parse(tokens[5]));
+        userEntity.setUpdatedAt(Instant.parse(tokens[6]));
         String[] strRoles = tokens[7].split(",");
         Set<UserRoleEntity> roles = Arrays.stream(strRoles)
                 .map(strRole -> new UserRoleEntity(UserRoleEnum.valueOf(strRole)))

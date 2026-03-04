@@ -4,7 +4,7 @@ import com.blockwin.protocol_api.account.model.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Builder
@@ -31,8 +31,8 @@ public class PlatformEntity {
     private Long checkIntervalSeconds;
 
     @Column(nullable = false, name = "created_at")
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 }

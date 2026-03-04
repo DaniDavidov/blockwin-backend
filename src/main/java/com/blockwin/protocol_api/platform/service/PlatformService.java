@@ -14,7 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -34,7 +34,7 @@ public class PlatformService {
                 .owner(user)
                 .url(registerRequest.url())
                 .checkIntervalSeconds(registerRequest.checkIntervalSeconds())
-                .createdAt(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .build();
         PlatformEntity saved = platformRepository.save(platform);
         return new RegisterPlatformResponse(saved.getId());
@@ -44,7 +44,7 @@ public class PlatformService {
         PlatformEntity platform = platformRepository.findById(id).orElseThrow(() -> new PlatformNotFoundException(id.toString()));
         platform.setCheckIntervalSeconds(registerRequest.checkIntervalSeconds());
         platform.setUrl(registerRequest.url());
-        platform.setUpdatedAt(LocalDateTime.now());
+        platform.setUpdatedAt(Instant.now());
         platformRepository.save(platform);
         return new RegisterPlatformResponse(platform.getId());
     }
@@ -56,7 +56,7 @@ public class PlatformService {
     }
 
     private PlatformDTO mapToDTO(PlatformEntity platform) {
-        return new PlatformDTO(platform.getUrl(), platform.getCheckIntervalSeconds());
+        return new PlatformDTO(platform.getUrl(), platform.getCheckIntervalSeconds(), platform.getCreatedAt());
     }
 
     public List<PlatformDTO> getAllPlatforms() {

@@ -1,4 +1,6 @@
 package com.blockwin.protocol_api.platform.model.dto;
 
-public record PlatformDTO(String url, Long checkIntervalSeconds) {
+import java.time.Instant;
+
+public record PlatformDTO(String url, Long checkIntervalSeconds, Instant createdAt) {
 }

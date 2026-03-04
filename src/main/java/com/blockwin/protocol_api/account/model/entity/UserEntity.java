@@ -7,7 +7,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDate;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
@@ -38,11 +38,11 @@ public class UserEntity extends BaseEntity {
 
     @CreationTimestamp
     @Column(updatable = false, name = "created_at")
-    private LocalDate createdAt;
+    private Instant createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at")
-    private LocalDate updatedAt;
+    private Instant updatedAt;
 
     @ManyToMany(fetch = FetchType.EAGER)
     private Set<UserRoleEntity> userRoles;

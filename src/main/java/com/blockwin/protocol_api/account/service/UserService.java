@@ -23,7 +23,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
+import java.time.Instant;
 import java.util.*;
 
 @Service
@@ -60,8 +60,8 @@ public class UserService {
                 .firstName(request.firstName())
                 .lastName(request.lastName())
                 .phoneNumber(request.phoneNumber())
-                .createdAt(LocalDate.now())
-                .updatedAt(LocalDate.now())
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
                 .userRoles(Set.of(this.userRoleRepository.findByName(UserRoleEnum.USER).get()))
                 .build();
 
@@ -115,7 +115,7 @@ public class UserService {
         userEntity.setLastName(request.lastName());
         userEntity.setPhoneNumber(request.phoneNumber());
         userEntity.setCreatedAt(userEntity.getCreatedAt());
-        userEntity.setUpdatedAt(LocalDate.now());
+        userEntity.setUpdatedAt(Instant.now());
         UserEntity savedUser = this.userRepository.save(userEntity);
 
         String jwt = this.jwtService.generateToken(UserStringMapper.mapToUserDetails(savedUser));
