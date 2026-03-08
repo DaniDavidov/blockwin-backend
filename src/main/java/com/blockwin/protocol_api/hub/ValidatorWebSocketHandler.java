@@ -23,7 +23,7 @@ import java.util.UUID;
 public class ValidatorWebSocketHandler extends TextWebSocketHandler {
     private final ValidatorService validatorService;
     private final ConnectionRegistry connectionRegistry;
-    private final MessageDispatcher messageDispatcher;
+    private final IngestionService ingestionService;
     private final PlatformService platformService;
     private final ObjectMapper objectMapper;
 
@@ -38,7 +38,7 @@ public class ValidatorWebSocketHandler extends TextWebSocketHandler {
             session.sendMessage(new TextMessage(json));
         } catch (IOException e) {
             log.error("Error while sending platforms for validation: {}", e.getMessage());
-            session.close();
+            session.close(new CloseStatus(1011, e.getMessage()));
         }
     }
 
@@ -50,8 +50,8 @@ public class ValidatorWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        messageDispatcher.dispatch(session, message);
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
+        ingestionService.enqueueMessage(session, message);
     }
 
 }

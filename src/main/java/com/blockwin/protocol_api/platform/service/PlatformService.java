@@ -2,6 +2,7 @@ package com.blockwin.protocol_api.platform.service;
 
 import com.blockwin.protocol_api.account.model.entity.UserEntity;
 import com.blockwin.protocol_api.account.service.UserService;
+import com.blockwin.protocol_api.platform.event.CachePlatformEvent;
 import com.blockwin.protocol_api.platform.model.PlatformEntity;
 import com.blockwin.protocol_api.platform.model.dto.PlatformDTO;
 import com.blockwin.protocol_api.platform.model.dto.RegisterPlatformRequest;
@@ -9,6 +10,7 @@ import com.blockwin.protocol_api.platform.model.dto.RegisterPlatformResponse;
 import com.blockwin.protocol_api.platform.model.error.PlatformNotFoundException;
 import com.blockwin.protocol_api.platform.repository.PlatformRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
 public class PlatformService {
     private final UserService userService;
     private final PlatformRepository platformRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     public RegisterPlatformResponse registerPlatform(RegisterPlatformRequest registerRequest) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -37,6 +40,15 @@ public class PlatformService {
                 .createdAt(Instant.now())
                 .build();
         PlatformEntity saved = platformRepository.save(platform);
+
+        CachePlatformEvent cachePlatformEvent = new CachePlatformEvent(
+                this,
+                saved.getUrl(),
+                saved.getCheckIntervalSeconds(),
+                saved.getCreatedAt()
+        );
+        applicationEventPublisher.publishEvent(cachePlatformEvent);
+
         return new RegisterPlatformResponse(saved.getId());
     }
 

@@ -1,5 +1,5 @@
 package com.blockwin.protocol_api.hub;
 
-public enum MessageType {
-    REPORT
+public enum ReportType {
+    UPTIME
 }
