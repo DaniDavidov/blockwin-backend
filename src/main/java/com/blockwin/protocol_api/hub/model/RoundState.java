@@ -1,11 +1,12 @@
 package com.blockwin.protocol_api.hub.model;
 
+import com.blockwin.protocol_api.hub.ReportType;
 import lombok.Data;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
@@ -17,9 +18,11 @@ public class RoundState implements Delayed {
     private long roundId;
     private boolean finalized;
     private Instant expiration;
-    private final HashMap<UUID, Report> platformReports = new HashMap<>();
+    private final ConcurrentHashMap<UUID, ReportBitmap> bitmapByValidator = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<ReportType, List<Report>> reportsByType = new ConcurrentHashMap<>();
 
     public RoundState(String platformURL, long checkIntervalSeconds, Instant registrationTimestamp) {
+        this.reportsByType.put(ReportType.UPTIME, new ArrayList<>());
         this.platformURL = platformURL;
         this.checkIntervalSeconds = checkIntervalSeconds;
         this.registrationTimestamp = registrationTimestamp;

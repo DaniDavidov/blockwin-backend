@@ -1,6 +1,7 @@
 package com.blockwin.protocol_api.hub.model;
 
 import com.blockwin.protocol_api.health.model.Status;
+import com.blockwin.protocol_api.hub.ReportType;
 import lombok.Getter;
 
 import java.time.Instant;
@@ -19,6 +20,7 @@ public class UptimeReport extends Report {
     public UptimeReport(UUID validatorId,
                         String platformUrl,
                         Instant timestamp,
+                        ReportType reportType,
                         Status status,
                         long dnsResolutionTime,
                         long tcpConnectTime,
@@ -26,7 +28,7 @@ public class UptimeReport extends Report {
                         long timeToFirstByte,
                         long totalResponseTime
     ) {
-        super(validatorId, platformUrl,timestamp);
+        super(validatorId, platformUrl,timestamp, reportType);
         this.status = status;
         this.dnsResolutionTime = dnsResolutionTime;
         this.tcpConnectTime = tcpConnectTime;

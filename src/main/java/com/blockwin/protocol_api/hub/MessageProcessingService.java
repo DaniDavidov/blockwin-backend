@@ -2,6 +2,7 @@ package com.blockwin.protocol_api.hub;
 
 import com.blockwin.protocol_api.hub.model.MessageEnvelope;
 import com.blockwin.protocol_api.hub.model.Report;
+import com.blockwin.protocol_api.hub.model.ReportBitmap;
 import com.blockwin.protocol_api.hub.model.RoundState;
 import com.blockwin.protocol_api.hub.processors.ReportProcessor;
 import com.blockwin.protocol_api.hub.processors.UptimeReportProcessor;
@@ -57,10 +58,11 @@ public class MessageProcessingService {
             throw new RuntimeException("Unknown platform URL: " + incomingReport.getPlatformUrl());
         }
 
-        Report report = state
-                .getPlatformReports()
-                .get(incomingReport.getValidatorId());
-        if (report != null) {
+        ReportBitmap bitmap = state
+                .getBitmapByValidator()
+                .computeIfAbsent(incomingReport.getValidatorId(), uuid -> new ReportBitmap());
+        boolean success = bitmap.markSubmitted(incomingReport.getReportType());
+        if (!success) {
             throw new RuntimeException("The validator has already submitted a report for this round.");
         }
 
@@ -68,7 +70,13 @@ public class MessageProcessingService {
             initializeState(state);
         }
 
-        state.getPlatformReports().put(incomingReport.getValidatorId(), incomingReport);
+        state.getReportsByType().computeIfPresent(
+                incomingReport.getReportType(),
+                (reportType, reports) -> {
+                    reports.add(incomingReport);
+                    return reports;
+                }
+        );
     }
 
     private void initializeState(RoundState state) {
