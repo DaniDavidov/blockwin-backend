@@ -9,7 +9,10 @@ import org.springframework.kafka.config.TopicBuilder;
 public class KafkaTopicConfig {
 
     @Bean
-    public NewTopic validatorScoreUpdateTopic() {
-        return TopicBuilder.name("validator.report").partitions(1).replicas(1).build();
+    public NewTopic roundExecutionTopic() {
+        return TopicBuilder.name("round.execution")
+                .partitions(3)
+                .replicas(1)
+                .build();
     }
 }
