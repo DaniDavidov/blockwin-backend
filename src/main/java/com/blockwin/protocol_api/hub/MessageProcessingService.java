@@ -7,6 +7,7 @@ import com.blockwin.protocol_api.hub.model.RoundState;
 import com.blockwin.protocol_api.hub.processors.ReportProcessor;
 import com.blockwin.protocol_api.hub.processors.UptimeReportProcessor;
 import com.blockwin.protocol_api.platform.event.CachePlatformEvent;
+import com.blockwin.protocol_api.platform.event.PlatformUpdateEvent;
 import com.blockwin.protocol_api.platform.service.PlatformService;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -22,16 +23,19 @@ import java.util.HashMap;
 public class MessageProcessingService {
     private final IngestionService ingestionService;
     private final StateRegistry stateRegistry;
+    private final StateUpdateRegistry stateUpdateRegistry;
     private final HashMap<ReportType, ReportProcessor> reportProcessors;
     private static final int NUMBER_OF_WORKERS = 3;
 
     public MessageProcessingService(
             IngestionService ingestionService,
             UptimeReportProcessor uptimeReportProcessor,
-            StateRegistry stateRegistry
+            StateRegistry stateRegistry,
+            StateUpdateRegistry stateUpdateRegistry
     ) {
         this.ingestionService = ingestionService;
         this.stateRegistry = stateRegistry;
+        this.stateUpdateRegistry = stateUpdateRegistry;
         this.reportProcessors = new HashMap<>();
         this.reportProcessors.put(ReportType.UPTIME, uptimeReportProcessor);
     }
@@ -84,6 +88,7 @@ public class MessageProcessingService {
         state.setRoundId(span / state.getCheckIntervalSeconds());
         state.setFinalized(false);
         state.setExpiration(Instant.now().plusSeconds(state.getCheckIntervalSeconds()));
+        stateRegistry.launchState(state.getPlatformURL());
     }
 
     private void startWorker() {
@@ -113,5 +118,13 @@ public class MessageProcessingService {
                 cachePlatformEvent.getRegistrationTimestamp()
         );
         stateRegistry.registerState(state);
+    }
+
+    @EventListener
+    public void cacheUpdate(PlatformUpdateEvent event) {
+        if (!(event.getSource() instanceof PlatformService)) {
+            return;
+        }
+        stateUpdateRegistry.registerUpdate(event.getPlatformURL(), event);
     }
 }

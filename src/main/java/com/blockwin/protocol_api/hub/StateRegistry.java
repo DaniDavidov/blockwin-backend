@@ -18,6 +18,14 @@ public class StateRegistry {
     public void registerState(@NotNull RoundState state) {
         String platformURL = state.getPlatformURL();
         stateMap.put(platformURL, state);
+    }
+
+    public void resetState(@NotNull RoundState newState) {
+        stateMap.compute(newState.getPlatformURL(), (key, oldState) -> newState);
+    }
+
+    public void launchState(@NotNull String platformURL) {
+        RoundState state = stateMap.get(platformURL);
         expirationQueue.add(state);
     }
 

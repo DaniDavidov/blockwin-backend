@@ -3,6 +3,7 @@ package com.blockwin.protocol_api.platform.service;
 import com.blockwin.protocol_api.account.model.entity.UserEntity;
 import com.blockwin.protocol_api.account.service.UserService;
 import com.blockwin.protocol_api.platform.event.CachePlatformEvent;
+import com.blockwin.protocol_api.platform.event.PlatformUpdateEvent;
 import com.blockwin.protocol_api.platform.model.PlatformEntity;
 import com.blockwin.protocol_api.platform.model.dto.PlatformDTO;
 import com.blockwin.protocol_api.platform.model.dto.RegisterPlatformRequest;
@@ -58,6 +59,15 @@ public class PlatformService {
         platform.setUrl(registerRequest.url());
         platform.setUpdatedAt(Instant.now());
         platformRepository.save(platform);
+
+        PlatformUpdateEvent updateEvent = new PlatformUpdateEvent(
+                this,
+                registerRequest.url(),
+                registerRequest.checkIntervalSeconds(),
+                platform.getCreatedAt()
+        );
+        applicationEventPublisher.publishEvent(updateEvent);
+
         return new RegisterPlatformResponse(platform.getId());
     }
 
