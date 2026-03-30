@@ -60,7 +60,7 @@ public class UptimeConsensusMechanism implements ConsensusMechanism<UptimeReport
         if (reports.size() < MIN_VALIDATORS) {
             return new RegionalUptimeResult(
                     continent,
-                    null,
+                    ReportCategory.UNDEFINED,
                     0,
                     -1,-1,-1,-1,-1,
                     Collections.EMPTY_MAP
@@ -157,6 +157,9 @@ public class UptimeConsensusMechanism implements ConsensusMechanism<UptimeReport
 
 
         for (RegionalUptimeResult r : regionalResults) {
+            if (r.votedCategory() == null) {
+                continue;
+            }
             globalVotes.merge(r.votedCategory(), 1, Integer::sum);
             Latency latency = new Latency(
                     r.dnsMedian(),
@@ -181,6 +184,7 @@ public class UptimeConsensusMechanism implements ConsensusMechanism<UptimeReport
 
         ReportCategory globalCategory = null;
         int maxVotes = 0;
+        int totalVotes = 0;
 
         for (Map.Entry<ReportCategory, Integer> e : globalVotes.entrySet()) {
 
@@ -188,8 +192,22 @@ public class UptimeConsensusMechanism implements ConsensusMechanism<UptimeReport
                 maxVotes = e.getValue();
                 globalCategory = e.getKey();
             }
+            totalVotes += e.getValue();
         }
-        int certainty = maxVotes * MAX_BPS / globalVotes.size();
+
+        if (globalVotes.isEmpty()) {
+            return new UptimeConsensusResult(
+                    ReportType.UPTIME,
+                    ReportCategory.UNDEFINED,
+                    0,
+                    Collections.EMPTY_MAP,
+                    Collections.EMPTY_MAP,
+                    Collections.EMPTY_MAP,
+                    reports
+            );
+        }
+
+        int certainty = maxVotes * MAX_BPS / totalVotes;
 
         return new UptimeConsensusResult(
                 ReportType.UPTIME,

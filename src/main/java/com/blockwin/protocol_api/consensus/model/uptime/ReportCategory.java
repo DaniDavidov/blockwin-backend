@@ -5,5 +5,6 @@ public enum ReportCategory {
     NETWORK_FAILURE,
     SERVER_FAILURE,
     CLIENT_ERROR,
-    SECURITY_FAILURE
+    SECURITY_FAILURE,
+    UNDEFINED,
 }
