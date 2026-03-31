@@ -72,7 +72,13 @@ public class ExecutionService {
                     this.stateRegistry.removeState(roundState.getPlatformURL());
                     resetRound(roundState);
                     List<ConsensusResult> consensusResults = this.consensusService.executeRound(roundState);
-                    ExecutedRound executedRound = new ExecutedRound(roundState.getRoundId(), consensusResults);
+                    ExecutedRound executedRound = new ExecutedRound(
+                            roundState.getRoundId(),
+                            roundState.getPlatformURL(),
+                            roundState.getStartTimestamp(),
+                            roundState.getExpiration(),
+                            consensusResults
+                    );
                     notifyForConsensusResult(executedRound);
                 } catch (InterruptedException e) {
                     log.error(e.getMessage());

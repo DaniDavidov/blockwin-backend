@@ -88,6 +88,7 @@ public class MessageProcessingService {
         state.setRoundId(span / state.getCheckIntervalSeconds());
         state.setFinalized(false);
         state.setExpiration(Instant.now().plusSeconds(state.getCheckIntervalSeconds()));
+        state.setStartTimestamp(Instant.now());
         stateRegistry.launchState(state.getPlatformURL());
     }
 
