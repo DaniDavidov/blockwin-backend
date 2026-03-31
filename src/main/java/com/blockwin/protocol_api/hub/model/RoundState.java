@@ -17,6 +17,7 @@ public class RoundState implements Delayed {
     private final Instant registrationTimestamp;
     private long roundId;
     private boolean finalized;
+    private Instant startTimestamp;
     private Instant expiration;
     private final ConcurrentHashMap<UUID, ReportBitmap> bitmapByValidator = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<ReportType, List<Report>> reportsByType = new ConcurrentHashMap<>();
