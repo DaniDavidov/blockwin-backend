@@ -1,8 +1,10 @@
 package com.blockwin.protocol_api.hub;
 
+import com.blockwin.protocol_api.consensus.cache.ValidatorReputationCacheService;
 import com.blockwin.protocol_api.platform.model.dto.PlatformDTO;
 import com.blockwin.protocol_api.platform.service.PlatformService;
 import com.blockwin.protocol_api.validator.model.enums.ValidatorStatus;
+import com.blockwin.protocol_api.validator.service.ValidatorScoringService;
 import com.blockwin.protocol_api.validator.service.ValidatorService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -25,13 +27,17 @@ public class ValidatorWebSocketHandler extends TextWebSocketHandler {
     private final ConnectionRegistry connectionRegistry;
     private final IngestionService ingestionService;
     private final PlatformService platformService;
+    private final ValidatorReputationCacheService validatorReputationCacheService;
+    private final ValidatorScoringService validatorScoringService;
     private final ObjectMapper objectMapper;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws IOException {
-        String validatorId = (String) session.getAttributes().get("validatorId");
-        validatorService.setValidatorStatus(UUID.fromString(validatorId), ValidatorStatus.ACTIVE);
-        connectionRegistry.register(UUID.fromString(validatorId), session);
+        UUID validatorId = (UUID) session.getAttributes().get("validatorId");
+        validatorService.setValidatorStatus(validatorId, ValidatorStatus.ACTIVE);
+        connectionRegistry.register(validatorId, session);
+        int validatorReputation = validatorScoringService.getValidatorReputation(validatorId);
+        validatorReputationCacheService.cacheValidator(validatorId, validatorReputation);
         List<PlatformDTO> platforms = platformService.getAllPlatforms();
         try {
             String json = objectMapper.writeValueAsString(platforms);
@@ -44,9 +50,9 @@ public class ValidatorWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        String validatorId = (String) session.getAttributes().get("validatorId");
-        validatorService.setValidatorStatus(UUID.fromString(validatorId), ValidatorStatus.INACTIVE);
-        connectionRegistry.unregister(UUID.fromString(validatorId));
+        UUID validatorId = (UUID) session.getAttributes().get("validatorId");
+        validatorService.setValidatorStatus(validatorId, ValidatorStatus.INACTIVE);
+        connectionRegistry.unregister(validatorId);
     }
 
     @Override
