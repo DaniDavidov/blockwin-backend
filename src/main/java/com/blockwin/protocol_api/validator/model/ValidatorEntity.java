@@ -33,6 +33,12 @@ public class ValidatorEntity {
     @Enumerated(EnumType.STRING)
     private ValidatorStatus status;
 
+    @Column(name = "correct_reports")
+    private long correctReports;
+
+    @Column(name = "total_reports")
+    private long totalReports;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 }
