@@ -98,6 +98,9 @@ public class MessageProcessingService {
                 try {
                     MessageEnvelope messageEnvelope = this.ingestionService.dequeueMessage();
                     Report report = processMessage(messageEnvelope);
+                    if (report == null) {
+                        continue;
+                    }
                     persistReport(report);
                 } catch (InterruptedException e) {
                     log.atError().log(e.getMessage());

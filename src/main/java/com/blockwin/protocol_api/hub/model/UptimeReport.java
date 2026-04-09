@@ -3,6 +3,8 @@ package com.blockwin.protocol_api.hub.model;
 import com.blockwin.protocol_api.health.model.Status;
 import com.blockwin.protocol_api.hub.ReportType;
 import com.blockwin.protocol_api.validator.model.enums.Continent;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
 import java.time.Instant;
@@ -18,19 +20,20 @@ public class UptimeReport extends Report {
     private final long timeToFirstByte;
     private final long totalResponseTime;
 
-    public UptimeReport(UUID validatorId,
-                        String platformUrl,
-                        Instant timestamp,
-                        ReportType reportType,
-                        Continent continent,
-                        Status status,
-                        long dnsResolutionTime,
-                        long tcpConnectTime,
-                        long tlsHandshakeTime,
-                        long timeToFirstByte,
-                        long totalResponseTime
+    @JsonCreator
+    public UptimeReport(@JsonProperty("validatorId") UUID validatorId,
+                        @JsonProperty("platformUrl") String platformUrl,
+                        @JsonProperty("timestamp") Instant timestamp,
+                        @JsonProperty("reportType") ReportType reportType,
+                        @JsonProperty("continent") Continent continent,
+                        @JsonProperty("status") Status status,
+                        @JsonProperty("dnsResolutionTime") long dnsResolutionTime,
+                        @JsonProperty("tcpConnectTime") long tcpConnectTime,
+                        @JsonProperty("tlsHandshakeTime") long tlsHandshakeTime,
+                        @JsonProperty("timeToFirstByte") long timeToFirstByte,
+                        @JsonProperty("totalResponseTime") long totalResponseTime
     ) {
-        super(validatorId, platformUrl,timestamp, reportType, continent);
+        super(validatorId, platformUrl, timestamp, reportType, continent);
         this.status = status;
         this.dnsResolutionTime = dnsResolutionTime;
         this.tcpConnectTime = tcpConnectTime;
