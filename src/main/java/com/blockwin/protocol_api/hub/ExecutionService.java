@@ -45,19 +45,24 @@ public class ExecutionService {
     }
 
     private void resetRound(RoundState roundState) {
+        long nextRoundId = roundState.getRoundId() + 1;
         PlatformUpdateEvent update = stateUpdateRegistry.getUpdate(roundState.getPlatformURL());
         RoundState newRound;
         if (update == null) {
             newRound = new RoundState(
                     roundState.getPlatformURL(),
                     roundState.getCheckIntervalSeconds(),
-                    roundState.getRegistrationTimestamp()
+                    roundState.getRegistrationTimestamp(),
+                    roundState.getLastRoundId(),
+                    nextRoundId
             );
         } else {
             newRound = new RoundState(
                     update.getPlatformURL(),
                     update.getCheckIntervalSeconds(),
-                    update.getRegistrationTimestamp()
+                    update.getRegistrationTimestamp(),
+                    roundState.getLastRoundId(),
+                    nextRoundId
             );
             stateUpdateRegistry.removeUpdate(update.getPlatformURL());
         }

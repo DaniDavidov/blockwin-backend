@@ -30,6 +30,9 @@ public class PlatformEntity {
     @Column(nullable = false, name = "check_interval_seconds")
     private Long checkIntervalSeconds;
 
+    @Column(nullable = false, name = "validation_end_date")
+    private Instant validationEndDate;
+
     @Column(nullable = false, name = "created_at")
     private Instant createdAt;
 

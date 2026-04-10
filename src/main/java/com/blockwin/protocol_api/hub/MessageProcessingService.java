@@ -71,7 +71,7 @@ public class MessageProcessingService {
             throw new RuntimeException("The validator has already submitted a report for this round.");
         }
 
-        if (state.getRoundId() == -1) {
+        if (state.getStartTimestamp() == null) {
             initializeState(state);
         }
 
@@ -85,8 +85,6 @@ public class MessageProcessingService {
     }
 
     private void initializeState(RoundState state) {
-        long span = Instant.now().getEpochSecond() - state.getRegistrationTimestamp().getEpochSecond();
-        state.setRoundId(span / state.getCheckIntervalSeconds());
         state.setFinalized(false);
         state.setExpiration(Instant.now().plusSeconds(state.getCheckIntervalSeconds()));
         state.setStartTimestamp(Instant.now());
@@ -118,10 +116,16 @@ public class MessageProcessingService {
         if (!(cachePlatformEvent.getSource() instanceof PlatformService)) {
             return;
         }
+        long lastRoundTimestampSeconds = cachePlatformEvent.getValidationEndTimestamp().getEpochSecond();
+        long registrationTimestampSeconds = cachePlatformEvent.getRegistrationTimestamp().getEpochSecond();
+        long interval = cachePlatformEvent.getCheckIntervalSeconds();
+        long lastRoundId = (lastRoundTimestampSeconds - registrationTimestampSeconds) / interval;
+
         RoundState state = new RoundState(
                 cachePlatformEvent.getPlatformURL(),
                 cachePlatformEvent.getCheckIntervalSeconds(),
-                cachePlatformEvent.getRegistrationTimestamp()
+                cachePlatformEvent.getRegistrationTimestamp(),
+                lastRoundId
         );
         stateRegistry.registerState(state);
     }

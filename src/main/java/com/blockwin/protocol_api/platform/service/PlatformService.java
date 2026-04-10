@@ -18,6 +18,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -34,11 +35,14 @@ public class PlatformService {
         UserDetails principal = (UserDetails) authentication.getPrincipal();
 
         UserEntity user = userService.getByUsername(principal.getUsername());
+        Instant createdAt = Instant.now();
+        Instant validationEndDate = createdAt.plus(registerRequest.validationDays(), ChronoUnit.DAYS);
         PlatformEntity platform = PlatformEntity.builder()
                 .owner(user)
                 .url(registerRequest.url())
                 .checkIntervalSeconds(registerRequest.checkIntervalSeconds())
-                .createdAt(Instant.now())
+                .validationEndDate(validationEndDate)
+                .createdAt(createdAt)
                 .build();
         PlatformEntity saved = platformRepository.save(platform);
 
@@ -46,7 +50,8 @@ public class PlatformService {
                 this,
                 saved.getUrl(),
                 saved.getCheckIntervalSeconds(),
-                saved.getCreatedAt()
+                saved.getCreatedAt(),
+                saved.getValidationEndDate()
         );
         applicationEventPublisher.publishEvent(cachePlatformEvent);
 
