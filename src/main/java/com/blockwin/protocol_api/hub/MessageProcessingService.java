@@ -12,6 +12,7 @@ import com.blockwin.protocol_api.platform.service.PlatformService;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -111,6 +112,7 @@ public class MessageProcessingService {
         worker.start();
     }
 
+    @Order(1)
     @EventListener
     public void cachePlatform(CachePlatformEvent cachePlatformEvent) {
         if (!(cachePlatformEvent.getSource() instanceof PlatformService)) {
@@ -124,6 +126,7 @@ public class MessageProcessingService {
         stateRegistry.registerState(state);
     }
 
+    @Order(1)
     @EventListener
     public void cacheUpdate(PlatformUpdateEvent event) {
         if (!(event.getSource() instanceof PlatformService)) {
