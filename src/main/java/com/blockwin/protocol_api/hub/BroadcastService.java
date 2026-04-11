@@ -3,6 +3,7 @@ package com.blockwin.protocol_api.hub;
 import com.blockwin.protocol_api.platform.event.CachePlatformEvent;
 import com.blockwin.protocol_api.platform.event.PlatformUpdateEvent;
 import com.blockwin.protocol_api.platform.model.dto.PlatformDTO;
+import com.blockwin.protocol_api.platform.model.dto.PlatformExpiredNotification;
 import com.blockwin.protocol_api.platform.service.PlatformService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,8 +31,7 @@ public class BroadcastService {
         if (!(event.getSource() instanceof PlatformService)) {
             return;
         }
-        PlatformDTO dto = new PlatformDTO(event.getPlatformURL(), event.getCheckIntervalSeconds(), event.getRegistrationTimestamp());
-        broadcast(dto);
+        broadcast(new PlatformDTO(event.getPlatformId(), event.getPlatformURL(), event.getCheckIntervalSeconds(), event.getRegistrationTimestamp()));
     }
 
     @Order(2)
@@ -40,20 +40,26 @@ public class BroadcastService {
         if (!(event.getSource() instanceof PlatformService)) {
             return;
         }
-        PlatformDTO dto = new PlatformDTO(event.getPlatformURL(), event.getCheckIntervalSeconds(), event.getRegistrationTimestamp());
-        broadcast(dto);
+        broadcast(new PlatformDTO(event.getPlatformId(), event.getPlatformURL(), event.getCheckIntervalSeconds(), event.getRegistrationTimestamp()));
     }
 
-    private void broadcast(PlatformDTO dto) {
-        String payload;
+    /**
+     * Notifies all connected validators that a platform's validation period has ended.
+     * Validators should stop submitting reports for the given URL upon receiving this.
+     */
+    public void broadcastPlatformExpired(String platformUrl) {
+        broadcast(new PlatformExpiredNotification(platformUrl));
+    }
+
+    private void broadcast(Object payload) {
+        String json;
         try {
-            payload = objectMapper.writeValueAsString(dto);
+            json = objectMapper.writeValueAsString(payload);
         } catch (JsonProcessingException e) {
-            log.error("Failed to serialize PlatformDTO for broadcast: {}", e.getMessage());
+            log.error("Failed to serialize broadcast payload: {}", e.getMessage());
             return;
         }
-
-        TextMessage message = new TextMessage(payload);
+        TextMessage message = new TextMessage(json);
         for (WebSocketSession session : connectionRegistry.getAllSessions()) {
             if (!session.isOpen()) {
                 continue;
@@ -61,7 +67,7 @@ public class BroadcastService {
             try {
                 session.sendMessage(message);
             } catch (IOException e) {
-                log.error("Failed to broadcast platform update to session {}: {}", session.getId(), e.getMessage());
+                log.error("Failed to broadcast to session {}: {}", session.getId(), e.getMessage());
             }
         }
     }

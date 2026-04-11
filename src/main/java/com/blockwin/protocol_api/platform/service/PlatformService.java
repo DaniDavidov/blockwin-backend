@@ -48,6 +48,7 @@ public class PlatformService {
 
         CachePlatformEvent cachePlatformEvent = new CachePlatformEvent(
                 this,
+                saved.getId(),
                 saved.getUrl(),
                 saved.getCheckIntervalSeconds(),
                 saved.getCreatedAt(),
@@ -67,6 +68,7 @@ public class PlatformService {
 
         PlatformUpdateEvent updateEvent = new PlatformUpdateEvent(
                 this,
+                platform.getId(),
                 registerRequest.url(),
                 registerRequest.checkIntervalSeconds(),
                 platform.getCreatedAt()
@@ -83,7 +85,7 @@ public class PlatformService {
     }
 
     private PlatformDTO mapToDTO(PlatformEntity platform) {
-        return new PlatformDTO(platform.getUrl(), platform.getCheckIntervalSeconds(), platform.getCreatedAt());
+        return new PlatformDTO(platform.getId(), platform.getUrl(), platform.getCheckIntervalSeconds(), platform.getCreatedAt());
     }
 
     public List<PlatformDTO> getAllPlatforms() {

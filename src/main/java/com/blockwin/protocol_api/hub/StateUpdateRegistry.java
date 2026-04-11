@@ -15,6 +15,9 @@ public class StateUpdateRegistry {
     }
 
     public void removeUpdate(@NotNull String platformUrl) {
+        if (!stateMap.containsKey(platformUrl)) {
+            return;
+        }
         stateMap.remove(platformUrl);
     }
 
