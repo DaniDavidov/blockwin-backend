@@ -55,6 +55,7 @@ public class SecurityConfig {
                         .requestMatchers("api/v1/validator/challenge").permitAll()
                         .requestMatchers("/api/v1/admin/configure").hasRole("ADMIN")
                         .requestMatchers("/api/v1/user/**").hasRole("USER")
+                        .requestMatchers("/api/rewards/platforms/{platformId}/epochs/{epochId}/publish").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
