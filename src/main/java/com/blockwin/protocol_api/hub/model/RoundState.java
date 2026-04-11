@@ -12,22 +12,37 @@ import java.util.concurrent.TimeUnit;
 
 @Data
 public class RoundState implements Delayed {
+    private final UUID platformId;
     private final String platformURL;
     private final long checkIntervalSeconds;
     private final Instant registrationTimestamp;
     private long roundId;
+    private long lastRoundId;
     private boolean finalized;
     private Instant startTimestamp;
     private Instant expiration;
     private final ConcurrentHashMap<UUID, ReportBitmap> bitmapByValidator = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<ReportType, List<Report>> reportsByType = new ConcurrentHashMap<>();
 
-    public RoundState(String platformURL, long checkIntervalSeconds, Instant registrationTimestamp) {
+    public RoundState(UUID platformId, String platformURL, long checkIntervalSeconds, Instant registrationTimestamp, long lastRoundId) {
         this.reportsByType.put(ReportType.UPTIME, new ArrayList<>());
+        this.platformId = platformId;
         this.platformURL = platformURL;
         this.checkIntervalSeconds = checkIntervalSeconds;
         this.registrationTimestamp = registrationTimestamp;
-        this.roundId = -1;
+        this.roundId = 0;
+        this.lastRoundId = lastRoundId;
+    }
+
+    /** Used when resetting after a completed round — roundId is already known. */
+    public RoundState(UUID platformId, String platformURL, long checkIntervalSeconds, Instant registrationTimestamp, long lastRoundId, long initialRoundId) {
+        this.reportsByType.put(ReportType.UPTIME, new ArrayList<>());
+        this.platformId = platformId;
+        this.platformURL = platformURL;
+        this.checkIntervalSeconds = checkIntervalSeconds;
+        this.registrationTimestamp = registrationTimestamp;
+        this.roundId = initialRoundId;
+        this.lastRoundId = lastRoundId;
     }
 
     @Override
