@@ -8,4 +8,11 @@ public class ChainConfig {
     private Integer chainId;
     private Integer requiredConfirmations;
     private String stakingContract;
+    private String rewardContract;
+
+    /**
+     * Private key used by the API to sign publishRoot transactions.
+     * Injected from environment variable
+     */
+    private String apiPrivateKey;
 }

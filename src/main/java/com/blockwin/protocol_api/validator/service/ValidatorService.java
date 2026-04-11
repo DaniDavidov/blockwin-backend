@@ -16,7 +16,10 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
+
+import static com.blockwin.protocol_api.common.utils.Constants.*;
 
 @AllArgsConstructor
 @Service
@@ -62,5 +65,29 @@ public class ValidatorService {
 
     public ValidatorStatus getValidatorStatus(UUID validatorId) {
         return getValidator(validatorId).getStatus();
+    }
+
+    /**
+     * Returns the validator's current reputation in basis points (0–10 000).
+     * Returns 0 if the validator has never submitted a report.
+     */
+    public int getReputationBps(UUID validatorId) {
+        ValidatorEntity validator = getValidator(validatorId);
+        if (validator.getTotalReports() == 0) return 0;
+        long correctReports = validator.getCorrectReports() + VIRTUAL_CORRECT_REPORTS;
+        long totalReports = validator.getTotalReports() + VIRTUAL_TOTAL_REPORTS;
+        return (int) (correctReports * MAX_BPS / totalReports);
+    }
+
+    /**
+     * Returns the validator's Ethereum address for a given chain, or empty if not registered.
+     * Used by the reward module to resolve on-chain identities without exposing repositories.
+     */
+    public Optional<String> getEthAddress(UUID validatorId, ChainName chainName) {
+        return chainRepository.findByValidator_Uuid(validatorId)
+                .stream()
+                .filter(e -> chainName.equals(e.getChainName()))
+                .findFirst()
+                .map(ValidatorChainEntity::getPublicKey);
     }
 }

@@ -122,6 +122,7 @@ public class MessageProcessingService {
         long lastRoundId = (lastRoundTimestampSeconds - registrationTimestampSeconds) / interval;
 
         RoundState state = new RoundState(
+                cachePlatformEvent.getPlatformId(),
                 cachePlatformEvent.getPlatformURL(),
                 cachePlatformEvent.getCheckIntervalSeconds(),
                 cachePlatformEvent.getRegistrationTimestamp(),

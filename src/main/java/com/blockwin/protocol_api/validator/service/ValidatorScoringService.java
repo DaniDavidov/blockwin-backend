@@ -3,6 +3,7 @@ package com.blockwin.protocol_api.validator.service;
 import com.blockwin.protocol_api.consensus.cache.ValidatorReputationCacheService;
 import com.blockwin.protocol_api.consensus.model.ConsensusResult;
 import com.blockwin.protocol_api.hub.model.ExecutedRound;
+import com.blockwin.protocol_api.reward.service.EpochService;
 import com.blockwin.protocol_api.validator.model.PlatformRoundId;
 import com.blockwin.protocol_api.validator.model.RoundScoreEntity;
 import com.blockwin.protocol_api.validator.model.ValidatorEntity;
@@ -19,7 +20,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.blockwin.protocol_api.common.utils.Constants.MAX_BPS;
+import static com.blockwin.protocol_api.common.utils.Constants.*;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -28,6 +29,7 @@ public class ValidatorScoringService {
     private final ValidatorRepository validatorRepository;
     private final RoundScoreRepository roundScoreRepository;
     private final ValidatorReputationCacheService reputationCacheService;
+    private final EpochService epochService;
 
     public int getValidatorReputation(UUID validatorId) {
         Optional<ValidatorEntity> opt = validatorRepository.findById(validatorId);
@@ -50,7 +52,9 @@ public class ValidatorScoringService {
             validatorEntity.setCorrectReports(validatorEntity.getCorrectReports() + 1);
         }
         validatorEntity.setTotalReports(validatorEntity.getTotalReports() + 1);
-        int reputation = (int) (validatorEntity.getCorrectReports() * MAX_BPS / validatorEntity.getTotalReports());
+        long correctReports = validatorEntity.getCorrectReports() + VIRTUAL_CORRECT_REPORTS;
+        long totalReports = validatorEntity.getTotalReports() + VIRTUAL_TOTAL_REPORTS;
+        int reputation = (int) (correctReports * MAX_BPS / totalReports);
         validatorRepository.save(validatorEntity);
         reputationCacheService.cacheValidator(validatorId, reputation);
     }
@@ -72,11 +76,16 @@ public class ValidatorScoringService {
     @Transactional
     public void handle(ExecutedRound round, Acknowledgment ack) {
         if ((roundScoreRepository.findById(new PlatformRoundId(round.roundId(), round.platformUrl()))).isPresent()) {
-            log.atError().log("Round already executed");
+            log.atWarn().log("Duplicate round.execution event - already processed, skipping");
+            ack.acknowledge();
             return;
         }
+        long epochId = EpochService.toEpochId(round.startTimestamp());
         for (ConsensusResult r : round.consensusResults()) {
-            r.getValidatorCorrectness().forEach(this::updateValidatorReputation);
+            r.getValidatorCorrectness().forEach((validatorId, isCorrect) -> {
+                updateValidatorReputation(validatorId, isCorrect);
+                epochService.recordParticipation(validatorId, round.platformUrl(), epochId);
+            });
         }
         persistExecutedRound(round);
         ack.acknowledge();

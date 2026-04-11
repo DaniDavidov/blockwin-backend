@@ -5,6 +5,8 @@ import com.blockwin.protocol_api.consensus.model.ConsensusResult;
 import com.blockwin.protocol_api.hub.model.ExecutedRound;
 import com.blockwin.protocol_api.hub.model.RoundState;
 import com.blockwin.protocol_api.platform.event.PlatformUpdateEvent;
+import com.blockwin.protocol_api.reward.service.EpochService;
+import com.blockwin.protocol_api.reward.service.RewardService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +14,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -21,6 +24,8 @@ public class ExecutionService {
     private final StateRegistry stateRegistry;
     private final StateUpdateRegistry stateUpdateRegistry;
     private final ConsensusService consensusService;
+    private final RewardService rewardService;
+    private final BroadcastService broadcastService;
     private final KafkaTemplate<String, ExecutedRound> kafkaTemplate;
 
     @PostConstruct
@@ -44,12 +49,36 @@ public class ExecutionService {
         });
     }
 
+    private void executeEpoch(RoundState roundState) {
+        stateRegistry.removeState(roundState.getPlatformURL());
+        stateUpdateRegistry.removeUpdate(roundState.getPlatformURL());
+
+        // Notify validators first so they stop submitting reports immediately.
+        broadcastService.broadcastPlatformExpired(roundState.getPlatformURL());
+
+        UUID platformId = roundState.getPlatformId();
+        long epochId = EpochService.toEpochId(roundState.getExpiration());
+        try {
+            rewardService.closeEpoch(platformId, epochId, "ethereum");
+            log.info("Epoch closed: platform={} epochId={}", roundState.getPlatformURL(), epochId);
+        } catch (Exception e) {
+            // State is already cleared — log and continue so the worker thread survives.
+            log.error("Failed to close epoch for platform={} epochId={}: {}",
+                    roundState.getPlatformURL(), epochId, e.getMessage());
+        }
+    }
+
     private void resetRound(RoundState roundState) {
+        if (roundState.getLastRoundId() == roundState.getRoundId()) {
+            executeEpoch(roundState);
+            return;
+        }
         long nextRoundId = roundState.getRoundId() + 1;
         PlatformUpdateEvent update = stateUpdateRegistry.getUpdate(roundState.getPlatformURL());
         RoundState newRound;
         if (update == null) {
             newRound = new RoundState(
+                    roundState.getPlatformId(),
                     roundState.getPlatformURL(),
                     roundState.getCheckIntervalSeconds(),
                     roundState.getRegistrationTimestamp(),
@@ -58,6 +87,7 @@ public class ExecutionService {
             );
         } else {
             newRound = new RoundState(
+                    roundState.getPlatformId(),
                     update.getPlatformURL(),
                     update.getCheckIntervalSeconds(),
                     update.getRegistrationTimestamp(),
