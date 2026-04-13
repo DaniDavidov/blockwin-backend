@@ -31,7 +31,7 @@ public class BroadcastService {
         if (!(event.getSource() instanceof PlatformService)) {
             return;
         }
-        broadcast(new PlatformDTO(event.getPlatformId(), event.getPlatformURL(), event.getCheckIntervalSeconds(), event.getRegistrationTimestamp()));
+        broadcast(new PlatformDTO(event.getPlatformId(), event.getPlatformURL(), event.getCheckIntervalSeconds(), event.getValidationStartTimestamp()));
     }
 
     @Order(2)

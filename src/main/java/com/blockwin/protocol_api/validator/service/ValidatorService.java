@@ -30,7 +30,7 @@ public class ValidatorService {
 
     @Transactional
     public UUID registerValidator(RegisterValidatorRequest registerValidatorRequest) {
-        transactionManagementService.validateDeposit(registerValidatorRequest);
+        transactionManagementService.validateStakingDeposit(registerValidatorRequest);
 
         ValidatorEntity validatorEntity = new ValidatorEntity();
         validatorEntity.setIpAddress(registerValidatorRequest.ipAddress());

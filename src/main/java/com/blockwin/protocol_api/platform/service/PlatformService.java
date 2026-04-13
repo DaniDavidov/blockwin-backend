@@ -10,6 +10,7 @@ import com.blockwin.protocol_api.platform.model.dto.RegisterPlatformRequest;
 import com.blockwin.protocol_api.platform.model.dto.RegisterPlatformResponse;
 import com.blockwin.protocol_api.platform.model.error.PlatformNotFoundException;
 import com.blockwin.protocol_api.platform.repository.PlatformRepository;
+import com.blockwin.protocol_api.reward.service.EpochService;
 import lombok.AllArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.Authentication;
@@ -29,6 +30,7 @@ public class PlatformService {
     private final UserService userService;
     private final PlatformRepository platformRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final EpochService epochService;
 
     public RegisterPlatformResponse registerPlatform(RegisterPlatformRequest registerRequest) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -36,25 +38,13 @@ public class PlatformService {
 
         UserEntity user = userService.getByUsername(principal.getUsername());
         Instant createdAt = Instant.now();
-        Instant validationEndDate = createdAt.plus(registerRequest.validationDays(), ChronoUnit.DAYS);
         PlatformEntity platform = PlatformEntity.builder()
                 .owner(user)
                 .url(registerRequest.url())
                 .checkIntervalSeconds(registerRequest.checkIntervalSeconds())
-                .validationEndDate(validationEndDate)
                 .createdAt(createdAt)
                 .build();
         PlatformEntity saved = platformRepository.save(platform);
-
-        CachePlatformEvent cachePlatformEvent = new CachePlatformEvent(
-                this,
-                saved.getId(),
-                saved.getUrl(),
-                saved.getCheckIntervalSeconds(),
-                saved.getCreatedAt(),
-                saved.getValidationEndDate()
-        );
-        applicationEventPublisher.publishEvent(cachePlatformEvent);
 
         return new RegisterPlatformResponse(saved.getId());
     }
@@ -66,14 +56,16 @@ public class PlatformService {
         platform.setUpdatedAt(Instant.now());
         platformRepository.save(platform);
 
-        PlatformUpdateEvent updateEvent = new PlatformUpdateEvent(
-                this,
-                platform.getId(),
-                registerRequest.url(),
-                registerRequest.checkIntervalSeconds(),
-                platform.getCreatedAt()
-        );
-        applicationEventPublisher.publishEvent(updateEvent);
+        if (this.epochService.hasActiveValidationPeriod(platform.getId())) {
+            PlatformUpdateEvent updateEvent = new PlatformUpdateEvent(
+                    this,
+                    platform.getId(),
+                    registerRequest.url(),
+                    registerRequest.checkIntervalSeconds(),
+                    platform.getCreatedAt()
+            );
+            applicationEventPublisher.publishEvent(updateEvent);
+        }
 
         return new RegisterPlatformResponse(platform.getId());
     }

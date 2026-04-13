@@ -3,11 +3,14 @@ package com.blockwin.protocol_api.reward.service;
 import com.blockwin.protocol_api.blockchain.config.BlockchainConfig;
 import com.blockwin.protocol_api.blockchain.model.dto.ChainConfig;
 import com.blockwin.protocol_api.blockchain.service.MultiChainService;
+import com.blockwin.protocol_api.blockchain.service.TransactionManagementService;
+import com.blockwin.protocol_api.platform.event.CachePlatformEvent;
 import com.blockwin.protocol_api.platform.model.PlatformEntity;
 import com.blockwin.protocol_api.platform.repository.PlatformRepository;
 import com.blockwin.protocol_api.reward.model.EpochParticipationEntity;
 import com.blockwin.protocol_api.reward.model.PlatformEpochEntity;
 import com.blockwin.protocol_api.reward.model.PlatformEpochId;
+import com.blockwin.protocol_api.reward.model.dto.DepositRewardRequest;
 import com.blockwin.protocol_api.reward.model.dto.MerkleProofResponse;
 import com.blockwin.protocol_api.reward.repository.EpochParticipationRepository;
 import com.blockwin.protocol_api.reward.repository.PlatformEpochRepository;
@@ -17,6 +20,7 @@ import com.blockwin.protocol_api.validator.service.ValidatorService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.web3j.abi.FunctionEncoder;
 import org.web3j.abi.datatypes.Function;
 import org.web3j.abi.datatypes.generated.Bytes32;
@@ -33,6 +37,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -67,6 +72,60 @@ public class RewardService {
     private final ValidatorService validatorService;
     private final MultiChainService multiChainService;
     private final BlockchainConfig blockchainConfig;
+    private final TransactionManagementService transactionManagementService;
+    private final ApplicationEventPublisher applicationEventPublisher;
+
+    /**
+     * Records a reward pot for the given platform epoch by verifying the platform owner's
+     * on-chain {@code depositReward()} transaction.
+     *
+     * <p>Delegates receipt inspection and event decoding to
+     * {@link TransactionManagementService#validateRewardDeposit} — no blockchain logic lives here.
+     * The decoded amount becomes the epoch's {@code rewardPot}.
+     *
+     * @throws IllegalStateException    if a reward pot is already registered for this epoch
+     * @throws IllegalArgumentException if the on-chain event data does not match the request
+     */
+    @Transactional
+    public void verifyRewardDeposit(UUID platformId, DepositRewardRequest request) {
+        PlatformEntity platform = platformRepository.findById(platformId)
+                .orElseThrow(() -> new IllegalArgumentException("Platform not found: " + platformId));
+
+        Instant validationStartTimestamp = Instant.now();
+        Instant validationEndTimestamp = validationStartTimestamp.plus(request.validationDays(), ChronoUnit.DAYS);
+        long epochId = EpochService.toEpochId(validationEndTimestamp);
+        PlatformEpochId epochKey = new PlatformEpochId(platformId, epochId);
+
+        if (platformEpochRepository.existsByIdPlatformIdAndValidationEndTimestampAfter(platformId, validationStartTimestamp)) {
+            throw new IllegalStateException(
+                    "Reward pot already deposited for platform " + platformId + " epoch " + epochKey);
+        }
+
+        transactionManagementService.validateRewardDeposit(request);
+
+        PlatformEpochEntity entity = PlatformEpochEntity.builder()
+                .id(epochKey)
+                .depositTxHash(request.txHash())
+                .rewardPot(request.amount())
+                .validationEndTimestamp(validationEndTimestamp)
+                .validationStartTimestamp(validationStartTimestamp)
+                .published(false)
+                .build();
+        platformEpochRepository.save(entity);
+
+        CachePlatformEvent event = new CachePlatformEvent(
+                this,
+                platformId,
+                platform.getUrl(),
+                platform.getCheckIntervalSeconds(),
+                validationStartTimestamp,
+                validationEndTimestamp
+        );
+        applicationEventPublisher.publishEvent(event);
+
+        log.info("Reward pot deposited: platformId={} epochId={} amount={} txHash={}",
+                platformId, epochId, request.amount(), request.txHash());
+    }
 
     /**
      * Closes the epoch: computes reputation-weighted reward shares, builds the Merkle tree,

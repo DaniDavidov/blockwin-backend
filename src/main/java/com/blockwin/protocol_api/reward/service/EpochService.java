@@ -3,6 +3,7 @@ package com.blockwin.protocol_api.reward.service;
 import com.blockwin.protocol_api.reward.model.EpochParticipationEntity;
 import com.blockwin.protocol_api.reward.model.EpochParticipationId;
 import com.blockwin.protocol_api.reward.repository.EpochParticipationRepository;
+import com.blockwin.protocol_api.reward.repository.PlatformEpochRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ import java.util.UUID;
 public class EpochService {
 
     private final EpochParticipationRepository epochParticipationRepository;
+    private final PlatformEpochRepository platformEpochRepository;
 
     /**
      * Derives the epoch ID (YYYYMMDD) from an arbitrary instant in UTC.
@@ -44,6 +46,16 @@ public class EpochService {
      */
     public static long getCurrentEpochId() {
         return toEpochId(Instant.now());
+    }
+
+    /**
+     * Returns {@code true} if the platform currently has at least one epoch whose
+     * validation window has not yet expired. Used to gate platform-update event
+     * emission in {@link com.blockwin.protocol_api.platform.service.PlatformService}.
+     */
+    public boolean hasActiveValidationPeriod(UUID platformId) {
+        return platformEpochRepository
+                .existsByIdPlatformIdAndValidationEndTimestampAfter(platformId, Instant.now());
     }
 
     /**
