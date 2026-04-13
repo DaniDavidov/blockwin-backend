@@ -26,11 +26,17 @@ public class EpochService {
     private final EpochParticipationRepository epochParticipationRepository;
 
     /**
-     * Derives the epoch ID (YYYYMM) from an arbitrary instant in UTC.
+     * Derives the epoch ID (YYYYMMDD) from an arbitrary instant in UTC.
+     *
+     * <p>Day granularity supports sub-monthly validation periods (e.g. four
+     * consecutive weekly epochs within the same calendar month all receive
+     * distinct IDs: 20260401, 20260408, 20260415, 20260422).
      */
     public static long toEpochId(Instant timestamp) {
         var dt = timestamp.atZone(ZoneOffset.UTC);
-        return (long) dt.getYear() * 100 + dt.getMonthValue();
+        return (long) dt.getYear() * 10_000L
+                + (long) dt.getMonthValue() * 100L
+                + dt.getDayOfMonth();
     }
 
     /**
