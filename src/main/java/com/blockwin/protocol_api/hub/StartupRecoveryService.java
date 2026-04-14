@@ -4,7 +4,7 @@ import com.blockwin.protocol_api.hub.model.RoundState;
 import com.blockwin.protocol_api.health.service.UptimeHealthService;
 import com.blockwin.protocol_api.platform.model.dto.PlatformDTO;
 import com.blockwin.protocol_api.platform.service.PlatformService;
-import com.blockwin.protocol_api.reward.service.ActiveEpoch;
+import com.blockwin.protocol_api.reward.model.dto.ActiveEpoch;
 import com.blockwin.protocol_api.reward.service.EpochService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,4 +1,4 @@
-package com.blockwin.protocol_api.reward.service;
+package com.blockwin.protocol_api.reward.model.dto;
 
 import java.time.Instant;
 import java.util.UUID;

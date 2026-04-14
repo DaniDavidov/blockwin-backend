@@ -2,6 +2,7 @@ package com.blockwin.protocol_api.reward.service;
 
 import com.blockwin.protocol_api.reward.model.EpochParticipationEntity;
 import com.blockwin.protocol_api.reward.model.EpochParticipationId;
+import com.blockwin.protocol_api.reward.model.dto.ActiveEpoch;
 import com.blockwin.protocol_api.reward.repository.EpochParticipationRepository;
 import com.blockwin.protocol_api.reward.repository.PlatformEpochRepository;
 import lombok.RequiredArgsConstructor;
