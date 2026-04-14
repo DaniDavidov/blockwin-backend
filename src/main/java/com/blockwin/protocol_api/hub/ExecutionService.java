@@ -50,11 +50,11 @@ public class ExecutionService {
     }
 
     private void executeEpoch(RoundState roundState) {
-        stateRegistry.removeState(roundState.getPlatformURL());
-        stateUpdateRegistry.removeUpdate(roundState.getPlatformURL());
-
         // Notify validators first so they stop submitting reports immediately.
         broadcastService.broadcastPlatformExpired(roundState.getPlatformURL());
+
+        stateRegistry.removeState(roundState.getPlatformURL());
+        stateUpdateRegistry.removeUpdate(roundState.getPlatformURL());
 
         UUID platformId = roundState.getPlatformId();
         long epochId = EpochService.toEpochId(roundState.getExpiration());
