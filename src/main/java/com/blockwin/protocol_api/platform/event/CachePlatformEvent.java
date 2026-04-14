@@ -11,15 +11,15 @@ public class CachePlatformEvent extends ApplicationEvent {
     private final UUID platformId;
     private final String platformURL;
     private final long checkIntervalSeconds;
-    private final Instant registrationTimestamp;
+    private final Instant validationStartTimestamp;
     private final Instant validationEndTimestamp;
 
-    public CachePlatformEvent(Object source, UUID platformId, String platformURL, long checkIntervalSeconds, Instant registrationTimestamp, Instant validationEndTimestamp) {
+    public CachePlatformEvent(Object source, UUID platformId, String platformURL, long checkIntervalSeconds, Instant validationStartTimestamp, Instant validationEndTimestamp) {
         super(source);
         this.platformId = platformId;
         this.platformURL = platformURL;
         this.checkIntervalSeconds = checkIntervalSeconds;
-        this.registrationTimestamp = registrationTimestamp;
+        this.validationStartTimestamp = validationStartTimestamp;
         this.validationEndTimestamp = validationEndTimestamp;
     }
 }

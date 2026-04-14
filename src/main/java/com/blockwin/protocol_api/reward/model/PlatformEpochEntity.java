@@ -13,17 +13,34 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "platform_epochs")
+@Table(
+        name = "platform_epochs",
+        indexes = @Index(name = "idx_platform_epochs_platform_end", columnList = "platform_id, validation_end_timestamp")
+)
 public class PlatformEpochEntity {
 
     @EmbeddedId
     private PlatformEpochId id;
 
     /**
+     * Transaction hash of the on-chain depositReward() call. Unique across all epochs so
+     * the same tx cannot fund two different epochs.
+     */
+    @Column(name = "deposit_tx_hash", length = 66, unique = true, nullable = false)
+    private String depositTxHash;
+
+    /**
      * Total reward pool deposited by the platform owner for this epoch (in wei).
      */
     @Column(name = "reward_pot", precision = 78, scale = 0, nullable = false)
     private BigInteger rewardPot;
+
+
+    @Column(name = "validation_end_timestamp", nullable = false)
+    private Instant validationEndTimestamp;
+
+    @Column(name = "validation_start_timestamp", nullable = false)
+    private Instant validationStartTimestamp;
 
     /**
      * The chain on which the Merkle root was published and against which validator

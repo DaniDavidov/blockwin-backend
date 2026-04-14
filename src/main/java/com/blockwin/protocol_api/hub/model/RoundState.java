@@ -35,13 +35,13 @@ public class RoundState implements Delayed {
     }
 
     /** Used when resetting after a completed round — roundId is already known. */
-    public RoundState(UUID platformId, String platformURL, long checkIntervalSeconds, Instant registrationTimestamp, long lastRoundId, long initialRoundId) {
+    public RoundState(UUID platformId, String platformURL, long checkIntervalSeconds, Instant registrationTimestamp, long lastRoundId, long roundId) {
         this.reportsByType.put(ReportType.UPTIME, new ArrayList<>());
         this.platformId = platformId;
         this.platformURL = platformURL;
         this.checkIntervalSeconds = checkIntervalSeconds;
         this.registrationTimestamp = registrationTimestamp;
-        this.roundId = initialRoundId;
+        this.roundId = roundId;
         this.lastRoundId = lastRoundId;
     }
 

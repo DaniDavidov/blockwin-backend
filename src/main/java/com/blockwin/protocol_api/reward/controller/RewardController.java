@@ -1,5 +1,6 @@
 package com.blockwin.protocol_api.reward.controller;
 
+import com.blockwin.protocol_api.reward.model.dto.DepositRewardRequest;
 import com.blockwin.protocol_api.reward.model.dto.MerkleProofResponse;
 import com.blockwin.protocol_api.reward.service.RewardService;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,27 @@ import java.util.UUID;
 public class RewardController {
 
     private final RewardService rewardService;
+
+    /**
+     * Platform owner registers their on-chain reward deposit for a given epoch.
+     * The request body must include the transaction hash of the {@code depositReward()} call
+     * so the server can verify the event on-chain.
+     */
+    @PostMapping("/platforms/{platformId}/deposit")
+    public ResponseEntity<Map<String, String>> depositReward(
+            @PathVariable UUID platformId,
+            @RequestBody DepositRewardRequest request) {
+        try {
+            rewardService.verifyRewardDeposit(platformId, request);
+            return ResponseEntity.ok(Map.of("status", "deposit-verified"));
+        } catch (IllegalStateException e) {
+            log.error("Deposit rejected: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Failed to process reward deposit: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
 
     /**
      * Admin publishes the stored Merkle root to the reward smart contract on-chain.

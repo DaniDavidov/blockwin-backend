@@ -9,6 +9,7 @@ import com.blockwin.protocol_api.hub.processors.UptimeReportProcessor;
 import com.blockwin.protocol_api.platform.event.CachePlatformEvent;
 import com.blockwin.protocol_api.platform.event.PlatformUpdateEvent;
 import com.blockwin.protocol_api.platform.service.PlatformService;
+import com.blockwin.protocol_api.reward.service.RewardService;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -113,19 +114,19 @@ public class MessageProcessingService {
     @Order(1)
     @EventListener
     public void cachePlatform(CachePlatformEvent cachePlatformEvent) {
-        if (!(cachePlatformEvent.getSource() instanceof PlatformService)) {
+        if (!(cachePlatformEvent.getSource() instanceof RewardService)) {
             return;
         }
         long lastRoundTimestampSeconds = cachePlatformEvent.getValidationEndTimestamp().getEpochSecond();
-        long registrationTimestampSeconds = cachePlatformEvent.getRegistrationTimestamp().getEpochSecond();
+        long validationStartTimestampSeconds = cachePlatformEvent.getValidationStartTimestamp().getEpochSecond();
         long interval = cachePlatformEvent.getCheckIntervalSeconds();
-        long lastRoundId = (lastRoundTimestampSeconds - registrationTimestampSeconds) / interval;
+        long lastRoundId = (lastRoundTimestampSeconds - validationStartTimestampSeconds) / interval;
 
         RoundState state = new RoundState(
                 cachePlatformEvent.getPlatformId(),
                 cachePlatformEvent.getPlatformURL(),
                 cachePlatformEvent.getCheckIntervalSeconds(),
-                cachePlatformEvent.getRegistrationTimestamp(),
+                cachePlatformEvent.getValidationStartTimestamp(),
                 lastRoundId
         );
         stateRegistry.registerState(state);
