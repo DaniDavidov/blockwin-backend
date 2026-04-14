@@ -16,8 +16,9 @@ import java.util.UUID;
 /**
  * Manages epoch lifecycle and validator participation tracking.
  *
- * <p>Epoch ID format: {@code YYYYMM} (e.g. {@code 202604} for April 2026).
- * This keeps epochs human-readable and naturally ordered.
+ * <p>Epoch ID format: {@code YYYYMMDD} (e.g. {@code 20260401} for 1 April 2026).
+ * Day granularity keeps IDs human-readable and supports multiple validation
+ * periods within the same calendar month (e.g. four weekly epochs).
  */
 @Slf4j
 @RequiredArgsConstructor
