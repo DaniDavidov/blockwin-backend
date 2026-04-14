@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -47,6 +48,21 @@ public class EpochService {
      */
     public static long getCurrentEpochId() {
         return toEpochId(Instant.now());
+    }
+
+    /**
+     * Returns all epochs whose validation window has not yet expired, projected
+     * into {@link ActiveEpoch} records. Used by the startup recovery pass to
+     * restore {@code RoundState} objects for all currently active platforms.
+     */
+    public List<ActiveEpoch> findAllActivePlatformEpochs() {
+        return platformEpochRepository.findAllByValidationEndTimestampAfter(Instant.now())
+                .stream()
+                .map(e -> new ActiveEpoch(
+                        e.getId().getPlatformId(),
+                        e.getValidationStartTimestamp(),
+                        e.getValidationEndTimestamp()))
+                .toList();
     }
 
     /**

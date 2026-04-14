@@ -18,7 +18,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -26,6 +29,18 @@ public class UptimeHealthService implements HealthService {
     private final ReportRepository reportRepository;
     private final UptimeRegionResultRepository uptimeRegionResultRepository;
     private final RoundHealthRepository roundHealthRepository;
+
+    public Map<String, Long> findLastCompletedRoundIds(Collection<String> platformUrls) {
+        if (platformUrls.isEmpty()) {
+            return Map.of();
+        }
+        return roundHealthRepository.findMaxRoundIdsByPlatformUrls(platformUrls)
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> (String) row[0],
+                        row -> (Long) row[1]
+                ));
+    }
 
     @Override
     public void accountHealth(long roundId, String platformUrl, ConsensusResult consensusResult) {

@@ -20,7 +20,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -78,6 +80,12 @@ public class PlatformService {
 
     private PlatformDTO mapToDTO(PlatformEntity platform) {
         return new PlatformDTO(platform.getId(), platform.getUrl(), platform.getCheckIntervalSeconds(), platform.getCreatedAt());
+    }
+
+    public Map<UUID, PlatformDTO> findAllByIds(Collection<UUID> ids) {
+        return platformRepository.findAllById(ids)
+                .stream()
+                .collect(Collectors.toMap(PlatformEntity::getId, this::mapToDTO));
     }
 
     public List<PlatformDTO> getAllPlatforms() {
