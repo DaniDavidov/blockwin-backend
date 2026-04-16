@@ -27,7 +27,7 @@ public class APIKeyService {
     public UUID extractValidatorIdFromAPIKey(String apiKey) {
         String decrypted = AESGCMEncryptor.decrypt(base64SecretKey, apiKey);
         String[] data = decrypted.split("_");
-        return UUID.fromString(data[0]);
+        return UUID.fromString(data[1]);
     }
 
 }

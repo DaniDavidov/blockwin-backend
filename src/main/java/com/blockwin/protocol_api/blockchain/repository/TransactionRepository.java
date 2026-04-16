@@ -11,4 +11,5 @@ import java.util.UUID;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
     public Optional<Transaction> findByTxHashAndChainName(String txHash, ChainName chainName);
+    public Optional<Transaction> findFirstByValidatorAddressOrderByTimestampDesc(String validatorAddress);
 }

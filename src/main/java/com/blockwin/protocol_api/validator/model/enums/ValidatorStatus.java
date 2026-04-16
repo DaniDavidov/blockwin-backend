@@ -1,9 +1,8 @@
 package com.blockwin.protocol_api.validator.model.enums;
 
 public enum ValidatorStatus {
+    NO_STAKE,
     ACTIVE,
     INACTIVE,
-    INITIATED_WITHDRAWAL,
-    HAS_WITHDRAWN,
     SLASHED
 }

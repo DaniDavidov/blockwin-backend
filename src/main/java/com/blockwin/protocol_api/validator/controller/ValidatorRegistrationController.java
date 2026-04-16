@@ -1,10 +1,9 @@
 package com.blockwin.protocol_api.validator.controller;
 
-import com.blockwin.protocol_api.validator.model.dto.RegisterValidatorRequest;
-import com.blockwin.protocol_api.validator.model.dto.RegisterValidatorResponse;
+import com.blockwin.protocol_api.validator.model.dto.*;
 import com.blockwin.protocol_api.blockchain.service.SignatureService;
-import com.blockwin.protocol_api.validator.service.APIKeyService;
 import com.blockwin.protocol_api.validator.service.ValidatorService;
+import com.blockwin.protocol_api.validator.service.ValidatorStakingService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +17,7 @@ import java.util.UUID;
 public class ValidatorRegistrationController {
     private final ValidatorService validatorService;
     private final SignatureService signatureService;
-    private final APIKeyService apiKeyService;
+    private final ValidatorStakingService validatorStakingService;
 
     @GetMapping("/challenge")
     public ResponseEntity<String> getChallenge() {
@@ -27,8 +26,17 @@ public class ValidatorRegistrationController {
 
     @PostMapping("/register")
     public ResponseEntity<RegisterValidatorResponse> registerValidator(@RequestBody RegisterValidatorRequest registerValidatorRequest) {
-        UUID uuid = validatorService.registerValidator(registerValidatorRequest);
-        String apiKey = apiKeyService.generateAPIKey(uuid);
-        return ResponseEntity.ok(new RegisterValidatorResponse(apiKey));
+        UUID validatorId = validatorService.registerValidator(registerValidatorRequest);
+        return ResponseEntity.ok(new RegisterValidatorResponse(validatorId));
+    }
+
+    @PostMapping("/stake/verify")
+    public ResponseEntity<StakeVerificationResponse> verifyStake(@RequestBody StakeVerificationRequest request) {
+        return ResponseEntity.ok(validatorStakingService.verifyStake(request));
+    }
+
+    @PostMapping("/unstake-signature")
+    public ResponseEntity<UnstakeSignatureResponse> getUnstakeSignature(@RequestBody UnstakeRequest request) {
+        return ResponseEntity.ok(validatorStakingService.generateUnstakeSignature(request.message(), request.signature()));
     }
 }

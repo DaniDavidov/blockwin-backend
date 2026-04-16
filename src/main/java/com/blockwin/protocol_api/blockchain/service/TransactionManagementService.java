@@ -7,7 +7,6 @@ import com.blockwin.protocol_api.blockchain.model.dto.ContractEvent;
 import com.blockwin.protocol_api.blockchain.repository.TransactionRepository;
 import com.blockwin.protocol_api.blockchain.util.EventDecoder;
 import com.blockwin.protocol_api.reward.model.dto.DepositRewardRequest;
-import com.blockwin.protocol_api.validator.model.dto.RegisterValidatorRequest;
 import com.blockwin.protocol_api.validator.model.enums.ChainName;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
@@ -27,40 +26,35 @@ import java.util.Optional;
 public class TransactionManagementService {
     private final MultiChainService multiChainService;
     private final BlockchainConfig blockchainConfig;
-    private final SignatureService signatureService;
     private final TransactionRepository transactionRepository;
 
     /**
      * Validates a staking deposit transaction: verifies the on-chain {@code Deposit} event,
-     * checks the validator address and ECDSA signature, and records the transaction.
+     * checks the validator address, and records the transaction.
+     * Identity verification via signed message is handled by the caller before invoking this.
      */
     @Transactional
-    public void validateStakingDeposit(RegisterValidatorRequest request) {
-        ChainConfig chainConfig = blockchainConfig.getChain(request.chainName());
+    public void validateStakingDeposit(String txHash, String chainName, String validatorAddress) {
+        ChainConfig chainConfig = blockchainConfig.getChain(chainName);
         List<Type> decodedParams = validateDeposit(
-                request.txHash(),
-                request.chainName(),
+                txHash,
+                chainName,
                 chainConfig.getStakingContract(),
                 ContractEvent.DEPOSIT_EVENT
         );
 
-        String validatorAddress = (String) decodedParams.get(0).getValue();
+        String eventAddress = (String) decodedParams.get(0).getValue();
         BigInteger amount = (BigInteger) decodedParams.get(1).getValue();
 
-        if (!validatorAddress.equalsIgnoreCase(request.publicKey())) {
-            throw new RuntimeException("Validator address does not match");
-        }
-
-        boolean isValid = signatureService.verifySignature(request.message(), request.signature(), validatorAddress);
-        if (!isValid) {
-            throw new RuntimeException("Signature validation failed");
+        if (!eventAddress.equalsIgnoreCase(validatorAddress)) {
+            throw new RuntimeException("Validator address does not match deposit event");
         }
 
         Transaction tx = Transaction.builder()
-                .txHash(request.txHash())
+                .txHash(txHash)
                 .validatorAddress(validatorAddress)
                 .amount(amount)
-                .chainName(ChainName.valueOf(request.chainName()))
+                .chainName(ChainName.valueOf(chainName))
                 .timestamp(Instant.now())
                 .build();
         transactionRepository.save(tx);

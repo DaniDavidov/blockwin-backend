@@ -5,7 +5,6 @@ import com.blockwin.protocol_api.blockchain.model.Transaction;
 import com.blockwin.protocol_api.blockchain.model.dto.ChainConfig;
 import com.blockwin.protocol_api.blockchain.model.dto.ContractEvent;
 import com.blockwin.protocol_api.blockchain.repository.TransactionRepository;
-import com.blockwin.protocol_api.validator.model.dto.RegisterValidatorRequest;
 import com.blockwin.protocol_api.validator.model.enums.ChainName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +30,6 @@ class TransactionManagementServiceTest {
 
     @Mock private MultiChainService multiChainService;
     @Mock private BlockchainConfig blockchainConfig;
-    @Mock private SignatureService signatureService;
     @Mock private TransactionRepository transactionRepository;
 
     @InjectMocks
@@ -68,23 +66,19 @@ class TransactionManagementServiceTest {
 
     @Test
     void validateStakingDeposit_validRequest_savesTransactionWithDecodedFields() {
-        RegisterValidatorRequest request = stakingRequest(VALIDATOR_ADDR, TX_HASH);
         when(blockchainConfig.getChain(CHAIN_NAME)).thenReturn(chainConfig);
         when(transactionRepository.findByTxHashAndChainName(TX_HASH, ChainName.ethereum))
                 .thenReturn(Optional.empty());
         when(multiChainService.getTransactionReceipt(CHAIN_NAME, TX_HASH))
                 .thenReturn(depositReceipt(STAKING_CONTRACT, VALIDATOR_ADDR, STAKE_AMOUNT, TIMESTAMP));
-        when(signatureService.verifySignature(anyString(), anyString(), anyString())).thenReturn(true);
 
-        service.validateStakingDeposit(request);
+        service.validateStakingDeposit(TX_HASH, CHAIN_NAME, VALIDATOR_ADDR);
 
         ArgumentCaptor<Transaction> captor = ArgumentCaptor.forClass(Transaction.class);
         verify(transactionRepository).save(captor.capture());
         Transaction saved = captor.getValue();
         assertEquals(TX_HASH, saved.getTxHash());
-        // Address.getValue() may or may not include the "0x" prefix depending on web3j version;
-        // compare against the raw 40-char hex portion case-insensitively.
-        String rawAddr = VALIDATOR_ADDR.substring(2); // strip "0x"
+        String rawAddr = VALIDATOR_ADDR.substring(2);
         assertTrue(saved.getValidatorAddress().toLowerCase().contains(rawAddr.toLowerCase()),
                 "Saved address should contain the on-chain address hex. Got: " + saved.getValidatorAddress());
         assertEquals(STAKE_AMOUNT, saved.getAmount());
@@ -93,48 +87,32 @@ class TransactionManagementServiceTest {
     }
 
     @Test
-    void validateStakingDeposit_duplicateTransaction_throwsWithoutSignatureCheck() {
-        RegisterValidatorRequest request = stakingRequest(VALIDATOR_ADDR, TX_HASH);
+    void validateStakingDeposit_duplicateTransaction_throws() {
         when(blockchainConfig.getChain(CHAIN_NAME)).thenReturn(chainConfig);
         when(transactionRepository.findByTxHashAndChainName(TX_HASH, ChainName.ethereum))
                 .thenReturn(Optional.of(new Transaction()));
 
-        assertThrows(RuntimeException.class, () -> service.validateStakingDeposit(request));
-        verifyNoInteractions(signatureService);
-    }
-
-    @Test
-    void validateStakingDeposit_addressInEventDoesNotMatchRequest_throwsWithoutSaving() {
-        // Receipt emits VALIDATOR_ADDR; request claims to be OTHER_ADDR
-        RegisterValidatorRequest request = stakingRequest(OTHER_ADDR, TX_HASH);
-
-        when(blockchainConfig.getChain(CHAIN_NAME)).thenReturn(chainConfig);
-        when(transactionRepository.findByTxHashAndChainName(TX_HASH, ChainName.ethereum))
-                .thenReturn(Optional.empty());
-        when(multiChainService.getTransactionReceipt(CHAIN_NAME, TX_HASH))
-                .thenReturn(depositReceipt(STAKING_CONTRACT, VALIDATOR_ADDR, STAKE_AMOUNT, TIMESTAMP));
-
-        assertThrows(RuntimeException.class, () -> service.validateStakingDeposit(request));
+        assertThrows(RuntimeException.class,
+                () -> service.validateStakingDeposit(TX_HASH, CHAIN_NAME, VALIDATOR_ADDR));
         verify(transactionRepository, never()).save(any());
     }
 
     @Test
-    void validateStakingDeposit_signatureInvalid_throwsWithoutSaving() {
-        RegisterValidatorRequest request = stakingRequest(VALIDATOR_ADDR, TX_HASH);
+    void validateStakingDeposit_addressInEventDoesNotMatchCaller_throwsWithoutSaving() {
+        // Receipt emits VALIDATOR_ADDR; caller claims to be OTHER_ADDR
         when(blockchainConfig.getChain(CHAIN_NAME)).thenReturn(chainConfig);
         when(transactionRepository.findByTxHashAndChainName(TX_HASH, ChainName.ethereum))
                 .thenReturn(Optional.empty());
         when(multiChainService.getTransactionReceipt(CHAIN_NAME, TX_HASH))
                 .thenReturn(depositReceipt(STAKING_CONTRACT, VALIDATOR_ADDR, STAKE_AMOUNT, TIMESTAMP));
-        when(signatureService.verifySignature(anyString(), anyString(), anyString())).thenReturn(false);
 
-        assertThrows(RuntimeException.class, () -> service.validateStakingDeposit(request));
+        assertThrows(RuntimeException.class,
+                () -> service.validateStakingDeposit(TX_HASH, CHAIN_NAME, OTHER_ADDR));
         verify(transactionRepository, never()).save(any());
     }
 
     @Test
     void validateStakingDeposit_receiptHasNoMatchingLog_throwsWithoutSaving() {
-        RegisterValidatorRequest request = stakingRequest(VALIDATOR_ADDR, TX_HASH);
         when(blockchainConfig.getChain(CHAIN_NAME)).thenReturn(chainConfig);
         when(transactionRepository.findByTxHashAndChainName(TX_HASH, ChainName.ethereum))
                 .thenReturn(Optional.empty());
@@ -143,17 +121,11 @@ class TransactionManagementServiceTest {
         TransactionReceipt receipt = depositReceipt("0x" + "9".repeat(40), VALIDATOR_ADDR, STAKE_AMOUNT, TIMESTAMP);
         when(multiChainService.getTransactionReceipt(CHAIN_NAME, TX_HASH)).thenReturn(receipt);
 
-        assertThrows(RuntimeException.class, () -> service.validateStakingDeposit(request));
+        assertThrows(RuntimeException.class,
+                () -> service.validateStakingDeposit(TX_HASH, CHAIN_NAME, VALIDATOR_ADDR));
         verify(transactionRepository, never()).save(any());
     }
 
-
-    private RegisterValidatorRequest stakingRequest(String publicKey, String txHash) {
-        return new RegisterValidatorRequest(
-                "192.168.1.1", "EUROPE", "DE", "31337", CHAIN_NAME,
-                publicKey, txHash, "signed-message", "0xsignature", 100
-        );
-    }
 
     /**
      * Builds a TransactionReceipt containing a single Deposit log ABI-encoded
@@ -173,10 +145,10 @@ class TransactionManagementServiceTest {
             BigInteger amount,
             BigInteger timestamp
     ) {
-        String eventSig     = EventEncoder.encode(ContractEvent.DEPOSIT_EVENT);
-        String addrTopic    = "0x000000000000000000000000"
+        String eventSig      = EventEncoder.encode(ContractEvent.DEPOSIT_EVENT);
+        String addrTopic     = "0x000000000000000000000000"
                 + validatorAddress.replace("0x", "").replace("0X", "").toLowerCase();
-        String amountTopic  = "0x" + String.format("%064x", amount);
+        String amountTopic   = "0x" + String.format("%064x", amount);
         String timestampData = "0x" + String.format("%064x", timestamp);
 
         Log log = new Log();
