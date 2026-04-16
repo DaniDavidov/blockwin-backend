@@ -53,6 +53,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(request -> request.requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("api/v1/validator/register").permitAll()
                         .requestMatchers("api/v1/validator/challenge").permitAll()
+                        .requestMatchers("api/v1/validator/stake/verify").permitAll()
+                        .requestMatchers("api/v1/validator/unstake-signature").permitAll()
                         .requestMatchers("/api/v1/admin/configure").hasRole("ADMIN")
                         .requestMatchers("/api/v1/user/**").hasRole("USER")
                         .requestMatchers("/api/rewards/platforms/{platformId}/epochs/{epochId}/publish").hasRole("ADMIN")

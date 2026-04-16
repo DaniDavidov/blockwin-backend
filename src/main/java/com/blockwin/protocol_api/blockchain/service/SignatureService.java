@@ -39,24 +39,14 @@ public class SignatureService {
         return message;
     }
 
-    public boolean verifySignature(
-            String message,
-            String signature,
-            String expectedAddress
-    ) {
+    public String recoverSignerAddress(String message, String signature) {
         if (!isChallengeValid(message)) {
-            return false;
+            throw new IllegalArgumentException("Invalid or expired challenge");
         }
-
         try {
-            // Recover the signing address from signature
-            String recoveredAddress = recoverAddress(message, signature);
-
-            // Compare with expected address
-            return expectedAddress.equalsIgnoreCase(recoveredAddress);
-
-        } catch (Exception e) {
-            return false;
+            return recoverAddress(message, signature);
+        } catch (SignatureException e) {
+            throw new IllegalArgumentException("Invalid signature", e);
         }
     }
 
