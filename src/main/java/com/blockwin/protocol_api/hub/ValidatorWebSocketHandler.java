@@ -2,7 +2,6 @@ package com.blockwin.protocol_api.hub;
 
 import com.blockwin.protocol_api.consensus.cache.ValidatorReputationCacheService;
 import com.blockwin.protocol_api.platform.model.dto.PlatformDTO;
-import com.blockwin.protocol_api.platform.service.PlatformService;
 import com.blockwin.protocol_api.validator.model.enums.ValidatorStatus;
 import com.blockwin.protocol_api.validator.service.ValidatorScoringService;
 import com.blockwin.protocol_api.validator.service.ValidatorService;
@@ -26,7 +25,7 @@ public class ValidatorWebSocketHandler extends TextWebSocketHandler {
     private final ValidatorService validatorService;
     private final ConnectionRegistry connectionRegistry;
     private final IngestionService ingestionService;
-    private final PlatformService platformService;
+    private final StateRegistry stateRegistry;
     private final ValidatorReputationCacheService validatorReputationCacheService;
     private final ValidatorScoringService validatorScoringService;
     private final ObjectMapper objectMapper;
@@ -38,7 +37,7 @@ public class ValidatorWebSocketHandler extends TextWebSocketHandler {
         connectionRegistry.register(validatorId, session);
         int validatorReputation = validatorScoringService.getValidatorReputation(validatorId);
         validatorReputationCacheService.cacheValidator(validatorId, validatorReputation);
-        List<PlatformDTO> platforms = platformService.getAllPlatforms();
+        List<PlatformDTO> platforms = stateRegistry.getActivePlatforms();
         try {
             String json = objectMapper.writeValueAsString(platforms);
             session.sendMessage(new TextMessage(json));
