@@ -48,7 +48,7 @@ public class PlatformEpochEntity {
      * generating proofs for a multichain deployment.
      */
     @Enumerated(EnumType.STRING)
-    @Column(name = "chain_name", length = 32)
+    @Column(name = "chain_name", length = 32, nullable = false)
     private ChainName chainName;
 
     /**

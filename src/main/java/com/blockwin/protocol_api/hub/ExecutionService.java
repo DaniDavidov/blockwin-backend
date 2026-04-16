@@ -59,7 +59,7 @@ public class ExecutionService {
         UUID platformId = roundState.getPlatformId();
         long epochId = EpochService.toEpochId(roundState.getExpiration());
         try {
-            rewardService.closeEpoch(platformId, epochId, "ethereum");
+            rewardService.closeEpoch(platformId, epochId);
             log.info("Epoch closed: platform={} epochId={}", roundState.getPlatformURL(), epochId);
         } catch (Exception e) {
             // State is already cleared — log and continue so the worker thread survives.

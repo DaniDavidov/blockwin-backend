@@ -109,6 +109,7 @@ public class RewardService {
                 .rewardPot(request.amount())
                 .validationEndTimestamp(validationEndTimestamp)
                 .validationStartTimestamp(validationStartTimestamp)
+                .chainName(ChainName.valueOf(request.chainName().toUpperCase()))
                 .published(false)
                 .build();
         platformEpochRepository.save(entity);
@@ -130,11 +131,9 @@ public class RewardService {
     /**
      * Closes the epoch: computes reputation-weighted reward shares, builds the Merkle tree,
      * and stores the root in the database. No on-chain write happens here.
-     *
-     * @param chainName the chain whose validator addresses are used when building leaves
      */
     @Transactional
-    public void closeEpoch(UUID platformId, long epochId, String chainName) {
+    public void closeEpoch(UUID platformId, long epochId) {
         PlatformEntity platform = platformRepository.findById(platformId)
                 .orElseThrow(() -> new IllegalArgumentException("Platform not found: " + platformId));
 
@@ -169,10 +168,10 @@ public class RewardService {
         List<ValidatorSlice> slices = new ArrayList<>();
         long totalWeightedShares = 0;
 
-        ChainName chain = ChainName.valueOf(chainName);
+        ChainName chainName = platformEpoch.getChainName();
         for (EpochParticipationEntity participation : participations) {
             UUID validatorId = participation.getId().getValidatorId();
-            Optional<String> address = resolveChainAddress(validatorId, chain);
+            Optional<String> address = resolveChainAddress(validatorId, chainName);
             if (address.isEmpty()) {
                 log.warn("Skipping validator {} — no address found on chain {}", validatorId, chainName);
                 continue;
@@ -212,7 +211,7 @@ public class RewardService {
         MerkleTree tree = new MerkleTree(leaves);
         String merkleRoot = tree.getRootHex();
 
-        platformEpoch.setChainName(chain);
+        platformEpoch.setChainName(chainName);
         platformEpoch.setMerkleRoot(merkleRoot);
         platformEpoch.setClosedAt(Instant.now());
         platformEpochRepository.save(platformEpoch);

@@ -73,7 +73,7 @@ class RewardServiceTest {
         when(platformRepository.findById(platformId)).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class,
-                () -> rewardService.closeEpoch(platformId, epochId, "ethereum"));
+                () -> rewardService.closeEpoch(platformId, epochId));
     }
 
     @Test
@@ -83,7 +83,7 @@ class RewardServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(IllegalStateException.class,
-                () -> rewardService.closeEpoch(platformId, epochId, "ethereum"));
+                () -> rewardService.closeEpoch(platformId, epochId));
     }
 
     @Test
@@ -93,7 +93,7 @@ class RewardServiceTest {
                 .thenReturn(Optional.of(closedEpoch()));
 
         assertThrows(IllegalStateException.class,
-                () -> rewardService.closeEpoch(platformId, epochId, "ethereum"));
+                () -> rewardService.closeEpoch(platformId, epochId));
     }
 
     @Test
@@ -105,7 +105,7 @@ class RewardServiceTest {
                 .thenReturn(List.of());
 
         assertThrows(IllegalStateException.class,
-                () -> rewardService.closeEpoch(platformId, epochId, "ethereum"));
+                () -> rewardService.closeEpoch(platformId, epochId));
     }
 
     @Test
@@ -116,11 +116,11 @@ class RewardServiceTest {
                 .thenReturn(Optional.of(openEpoch(BigInteger.valueOf(1_000_000))));
         when(epochParticipationRepository.findByIdPlatformUrlAndIdEpochId("example.com", epochId))
                 .thenReturn(List.of(participation(validatorId, 10L)));
-        when(validatorService.getEthAddress(validatorId, ChainName.ethereum))
+        when(validatorService.getEthAddress(validatorId, ChainName.ETHEREUM))
                 .thenReturn(Optional.empty());
 
         assertThrows(IllegalStateException.class,
-                () -> rewardService.closeEpoch(platformId, epochId, "ethereum"));
+                () -> rewardService.closeEpoch(platformId, epochId));
     }
 
     @Test
@@ -131,12 +131,12 @@ class RewardServiceTest {
                 .thenReturn(Optional.of(openEpoch(BigInteger.valueOf(1_000_000))));
         when(epochParticipationRepository.findByIdPlatformUrlAndIdEpochId("example.com", epochId))
                 .thenReturn(List.of(participation(validatorId, 10L)));
-        when(validatorService.getEthAddress(validatorId, ChainName.ethereum))
+        when(validatorService.getEthAddress(validatorId, ChainName.ETHEREUM))
                 .thenReturn(Optional.of("0xaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAa"));
         when(validatorService.getReputationBps(validatorId)).thenReturn(0);
 
         assertThrows(IllegalStateException.class,
-                () -> rewardService.closeEpoch(platformId, epochId, "ethereum"));
+                () -> rewardService.closeEpoch(platformId, epochId));
     }
 
     @Test
@@ -159,12 +159,12 @@ class RewardServiceTest {
                 .thenReturn(Optional.of(epoch));
         when(epochParticipationRepository.findByIdPlatformUrlAndIdEpochId("example.com", epochId))
                 .thenReturn(List.of(p1, p2));
-        when(validatorService.getEthAddress(v1, ChainName.ethereum)).thenReturn(Optional.of(a1));
-        when(validatorService.getEthAddress(v2, ChainName.ethereum)).thenReturn(Optional.of(a2));
+        when(validatorService.getEthAddress(v1, ChainName.ETHEREUM)).thenReturn(Optional.of(a1));
+        when(validatorService.getEthAddress(v2, ChainName.ETHEREUM)).thenReturn(Optional.of(a2));
         when(validatorService.getReputationBps(v1)).thenReturn(6000);
         when(validatorService.getReputationBps(v2)).thenReturn(4000);
 
-        rewardService.closeEpoch(platformId, epochId, "ethereum");
+        rewardService.closeEpoch(platformId, epochId);
 
         assertEquals(BigInteger.valueOf(750_000), p1.getRewardAmount());
         assertEquals(BigInteger.valueOf(250_000), p2.getRewardAmount());
@@ -172,7 +172,7 @@ class RewardServiceTest {
         assertTrue(epoch.getMerkleRoot().startsWith("0x"));
         assertEquals(66, epoch.getMerkleRoot().length()); // "0x" + 64 hex chars
         assertNotNull(epoch.getClosedAt());
-        assertEquals(ChainName.ethereum, epoch.getChainName());
+        assertEquals(ChainName.ETHEREUM, epoch.getChainName());
         verify(platformEpochRepository).save(epoch);
     }
 
@@ -190,13 +190,13 @@ class RewardServiceTest {
                 .thenReturn(Optional.of(openEpoch(pot)));
         when(epochParticipationRepository.findByIdPlatformUrlAndIdEpochId("example.com", epochId))
                 .thenReturn(List.of(p1, participation(withoutAddress, 10L)));
-        when(validatorService.getEthAddress(withAddress, ChainName.ethereum))
+        when(validatorService.getEthAddress(withAddress, ChainName.ETHEREUM))
                 .thenReturn(Optional.of(addr));
-        when(validatorService.getEthAddress(withoutAddress, ChainName.ethereum))
+        when(validatorService.getEthAddress(withoutAddress, ChainName.ETHEREUM))
                 .thenReturn(Optional.empty());
         when(validatorService.getReputationBps(withAddress)).thenReturn(5000);
 
-        rewardService.closeEpoch(platformId, epochId, "ethereum");
+        rewardService.closeEpoch(platformId, epochId);
 
         // withAddress has the only share, so it receives the full pot
         assertEquals(pot, p1.getRewardAmount());
@@ -217,12 +217,12 @@ class RewardServiceTest {
                 .thenReturn(Optional.of(openEpoch(BigInteger.valueOf(1000))));
         when(epochParticipationRepository.findByIdPlatformUrlAndIdEpochId("example.com", epochId))
                 .thenReturn(List.of(p1, p2));
-        when(validatorService.getEthAddress(v1, ChainName.ethereum)).thenReturn(Optional.of(a1));
-        when(validatorService.getEthAddress(v2, ChainName.ethereum)).thenReturn(Optional.of(a2));
+        when(validatorService.getEthAddress(v1, ChainName.ETHEREUM)).thenReturn(Optional.of(a1));
+        when(validatorService.getEthAddress(v2, ChainName.ETHEREUM)).thenReturn(Optional.of(a2));
         when(validatorService.getReputationBps(v1)).thenReturn(5000);
         when(validatorService.getReputationBps(v2)).thenReturn(5000);
 
-        rewardService.closeEpoch(platformId, epochId, "ethereum");
+        rewardService.closeEpoch(platformId, epochId);
 
         assertEquals(BigInteger.valueOf(500), p1.getRewardAmount());
         assertEquals(BigInteger.valueOf(500), p2.getRewardAmount());
@@ -267,7 +267,7 @@ class RewardServiceTest {
         when(epochParticipationRepository.findByIdPlatformUrlAndIdEpochId("example.com", epochId))
                 .thenReturn(List.of(participationWithReward(
                         otherValidator, 10L, BigInteger.valueOf(500))));
-        when(validatorService.getEthAddress(otherValidator, ChainName.ethereum))
+        when(validatorService.getEthAddress(otherValidator, ChainName.ETHEREUM))
                 .thenReturn(Optional.of("0xaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAa"));
 
         assertThrows(IllegalArgumentException.class,
@@ -286,7 +286,7 @@ class RewardServiceTest {
                 .thenReturn(Optional.of(closedEpoch()));
         when(epochParticipationRepository.findByIdPlatformUrlAndIdEpochId("example.com", epochId))
                 .thenReturn(List.of(participationWithReward(validatorId, 10L, reward)));
-        when(validatorService.getEthAddress(validatorId, ChainName.ethereum))
+        when(validatorService.getEthAddress(validatorId, ChainName.ETHEREUM))
                 .thenReturn(Optional.of(validatorAddress));
 
         MerkleProofResponse response = rewardService.getMerkleProof(platformId, epochId, validatorAddress);
@@ -311,7 +311,7 @@ class RewardServiceTest {
                 .thenReturn(Optional.of(closedEpoch()));
         when(epochParticipationRepository.findByIdPlatformUrlAndIdEpochId("example.com", epochId))
                 .thenReturn(List.of(participationWithReward(validatorId, 5L, reward)));
-        when(validatorService.getEthAddress(validatorId, ChainName.ethereum))
+        when(validatorService.getEthAddress(validatorId, ChainName.ETHEREUM))
                 .thenReturn(Optional.of(storedAddress));
 
         // Should not throw — both addresses normalise to the same lowercase key
@@ -375,7 +375,7 @@ class RewardServiceTest {
         assertEquals(request.txHash(), saved.getDepositTxHash());
         assertFalse(saved.isPublished());
         assertNull(saved.getMerkleRoot());
-        assertNull(saved.getChainName());
+        assertEquals(ChainName.ETHEREUM, saved.getChainName());
         assertNull(saved.getClosedAt());
     }
 
@@ -417,6 +417,7 @@ class RewardServiceTest {
         return PlatformEpochEntity.builder()
                 .id(new PlatformEpochId(platformId, epochId))
                 .rewardPot(rewardPot)
+                .chainName(ChainName.ETHEREUM)
                 .build();
     }
 
@@ -425,7 +426,7 @@ class RewardServiceTest {
                 .id(new PlatformEpochId(platformId, epochId))
                 .rewardPot(BigInteger.valueOf(1_000_000))
                 .merkleRoot("0x" + "ab".repeat(32))
-                .chainName(ChainName.ethereum)
+                .chainName(ChainName.ETHEREUM)
                 .build();
     }
 

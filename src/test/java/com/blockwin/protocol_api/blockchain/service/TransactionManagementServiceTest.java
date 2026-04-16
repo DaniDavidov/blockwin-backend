@@ -35,7 +35,7 @@ class TransactionManagementServiceTest {
     @InjectMocks
     private TransactionManagementService service;
 
-    private static final String CHAIN_NAME       = "ethereum";
+    private static final String CHAIN_NAME       = "ETHEREUM";
     private static final String TX_HASH          = "0x" + "a".repeat(64);
     private static final String STAKING_CONTRACT = "0x" + "1".repeat(40);
     private static final String VALIDATOR_ADDR   = "0x" + "2".repeat(40);
@@ -54,7 +54,7 @@ class TransactionManagementServiceTest {
 
     @Test
     void validateDeposit_transactionAlreadyRecorded_throwsBeforeFetchingReceipt() {
-        when(transactionRepository.findByTxHashAndChainName(TX_HASH, ChainName.ethereum))
+        when(transactionRepository.findByTxHashAndChainName(TX_HASH, ChainName.ETHEREUM))
                 .thenReturn(Optional.of(new Transaction()));
 
         assertThrows(RuntimeException.class,
@@ -67,7 +67,7 @@ class TransactionManagementServiceTest {
     @Test
     void validateStakingDeposit_validRequest_savesTransactionWithDecodedFields() {
         when(blockchainConfig.getChain(CHAIN_NAME)).thenReturn(chainConfig);
-        when(transactionRepository.findByTxHashAndChainName(TX_HASH, ChainName.ethereum))
+        when(transactionRepository.findByTxHashAndChainName(TX_HASH, ChainName.ETHEREUM))
                 .thenReturn(Optional.empty());
         when(multiChainService.getTransactionReceipt(CHAIN_NAME, TX_HASH))
                 .thenReturn(depositReceipt(STAKING_CONTRACT, VALIDATOR_ADDR, STAKE_AMOUNT, TIMESTAMP));
@@ -82,14 +82,14 @@ class TransactionManagementServiceTest {
         assertTrue(saved.getValidatorAddress().toLowerCase().contains(rawAddr.toLowerCase()),
                 "Saved address should contain the on-chain address hex. Got: " + saved.getValidatorAddress());
         assertEquals(STAKE_AMOUNT, saved.getAmount());
-        assertEquals(ChainName.ethereum, saved.getChainName());
+        assertEquals(ChainName.ETHEREUM, saved.getChainName());
         assertNotNull(saved.getTimestamp());
     }
 
     @Test
     void validateStakingDeposit_duplicateTransaction_throws() {
         when(blockchainConfig.getChain(CHAIN_NAME)).thenReturn(chainConfig);
-        when(transactionRepository.findByTxHashAndChainName(TX_HASH, ChainName.ethereum))
+        when(transactionRepository.findByTxHashAndChainName(TX_HASH, ChainName.ETHEREUM))
                 .thenReturn(Optional.of(new Transaction()));
 
         assertThrows(RuntimeException.class,
@@ -101,7 +101,7 @@ class TransactionManagementServiceTest {
     void validateStakingDeposit_addressInEventDoesNotMatchCaller_throwsWithoutSaving() {
         // Receipt emits VALIDATOR_ADDR; caller claims to be OTHER_ADDR
         when(blockchainConfig.getChain(CHAIN_NAME)).thenReturn(chainConfig);
-        when(transactionRepository.findByTxHashAndChainName(TX_HASH, ChainName.ethereum))
+        when(transactionRepository.findByTxHashAndChainName(TX_HASH, ChainName.ETHEREUM))
                 .thenReturn(Optional.empty());
         when(multiChainService.getTransactionReceipt(CHAIN_NAME, TX_HASH))
                 .thenReturn(depositReceipt(STAKING_CONTRACT, VALIDATOR_ADDR, STAKE_AMOUNT, TIMESTAMP));
@@ -114,7 +114,7 @@ class TransactionManagementServiceTest {
     @Test
     void validateStakingDeposit_receiptHasNoMatchingLog_throwsWithoutSaving() {
         when(blockchainConfig.getChain(CHAIN_NAME)).thenReturn(chainConfig);
-        when(transactionRepository.findByTxHashAndChainName(TX_HASH, ChainName.ethereum))
+        when(transactionRepository.findByTxHashAndChainName(TX_HASH, ChainName.ETHEREUM))
                 .thenReturn(Optional.empty());
 
         // Receipt from a completely different contract — no Deposit log from stakingContract
