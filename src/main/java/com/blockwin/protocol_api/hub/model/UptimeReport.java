@@ -21,11 +21,8 @@ public class UptimeReport extends Report {
     private final long totalResponseTime;
 
     @JsonCreator
-    public UptimeReport(@JsonProperty("validatorId") UUID validatorId,
-                        @JsonProperty("platformUrl") String platformUrl,
+    public UptimeReport(@JsonProperty("platformUrl") String platformUrl,
                         @JsonProperty("timestamp") Instant timestamp,
-                        @JsonProperty("reportType") ReportType reportType,
-                        @JsonProperty("continent") Continent continent,
                         @JsonProperty("status") Status status,
                         @JsonProperty("dnsResolutionTime") long dnsResolutionTime,
                         @JsonProperty("tcpConnectTime") long tcpConnectTime,
@@ -33,7 +30,7 @@ public class UptimeReport extends Report {
                         @JsonProperty("timeToFirstByte") long timeToFirstByte,
                         @JsonProperty("totalResponseTime") long totalResponseTime
     ) {
-        super(validatorId, platformUrl, timestamp, reportType, continent);
+        super(platformUrl, timestamp);
         this.status = status;
         this.dnsResolutionTime = dnsResolutionTime;
         this.tcpConnectTime = tcpConnectTime;

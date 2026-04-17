@@ -55,7 +55,7 @@ public class MessageProcessingService {
         if (reportProcessor == null) {
             throw new RuntimeException("Unknown message type: " + reportType);
         }
-        return reportProcessor.process(messageEnvelope.textMessage());
+        return reportProcessor.process(messageEnvelope);
     }
 
     private void persistReport(Report incomingReport) {

@@ -2,28 +2,31 @@ package com.blockwin.protocol_api.hub.model;
 
 import com.blockwin.protocol_api.hub.ReportType;
 import com.blockwin.protocol_api.validator.model.enums.Continent;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
+import lombok.Setter;
 
 import java.time.Instant;
 import java.util.UUID;
 
 @Data
+@JsonIgnoreProperties(value = {"validatorId", "continent", "reportType"}, ignoreUnknown = true)
 public abstract class Report {
-    private final UUID validatorId;
+    @Setter
+    private UUID validatorId;
 
     private final String platformUrl;
 
     private final Instant timestamp;
 
-    private final ReportType reportType;
+    @Setter
+    private ReportType reportType;
 
-    private final Continent continent;
+    @Setter
+    private Continent continent;
 
-    public Report(UUID validatorId, String platformUrl, Instant timestamp, ReportType reportType, Continent continent) {
-        this.validatorId = validatorId;
+    public Report(String platformUrl, Instant timestamp) {
         this.timestamp = timestamp;
         this.platformUrl = platformUrl;
-        this.reportType = reportType;
-        this.continent = continent;
     }
 }
