@@ -11,8 +11,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ConnectionRegistry {
     private final ConcurrentHashMap<UUID, WebSocketSession> connections = new ConcurrentHashMap<>();
 
-    public void register(UUID id, WebSocketSession session) {
-        connections.put(id, session);
+    public boolean registerIfAbsent(UUID id, WebSocketSession session) {
+        return connections.putIfAbsent(id, session) == null;
     }
 
     public void unregister(UUID id) {

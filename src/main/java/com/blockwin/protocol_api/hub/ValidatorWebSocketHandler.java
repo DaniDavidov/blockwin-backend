@@ -22,6 +22,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @Component
 public class ValidatorWebSocketHandler extends TextWebSocketHandler {
+    private static final int MAX_PAYLOAD_BYTES = 2_048;
+
     private final ValidatorService validatorService;
     private final ConnectionRegistry connectionRegistry;
     private final IngestionService ingestionService;
@@ -33,8 +35,12 @@ public class ValidatorWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws IOException {
         UUID validatorId = (UUID) session.getAttributes().get("validatorId");
+        if (!connectionRegistry.registerIfAbsent(validatorId, session)) {
+            log.warn("Duplicate session rejected for validator {}", validatorId);
+            session.close(new CloseStatus(4000, "duplicate session"));
+            return;
+        }
         validatorService.setValidatorStatus(validatorId, ValidatorStatus.ACTIVE);
-        connectionRegistry.register(validatorId, session);
         int validatorReputation = validatorScoringService.getValidatorReputation(validatorId);
         validatorReputationCacheService.cacheValidator(validatorId, validatorReputation);
         List<PlatformDTO> platforms = stateRegistry.getActivePlatforms();
@@ -55,8 +61,16 @@ public class ValidatorWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
-        ingestionService.enqueueMessage(session, message);
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) {
+        if (message.getPayloadLength() > MAX_PAYLOAD_BYTES) {
+            log.warn("Rejected oversized message ({} bytes) from validator {}", message.getPayloadLength(), session.getAttributes().get("validatorId"));
+            return;
+        }
+        try {
+            ingestionService.enqueueMessage(session, message);
+        } catch (Exception e) {
+            log.warn("Rejected message from validator {}: {}", session.getAttributes().get("validatorId"), e.getMessage());
+        }
     }
 
 }

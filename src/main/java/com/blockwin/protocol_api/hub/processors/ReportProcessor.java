@@ -1,7 +1,8 @@
 package com.blockwin.protocol_api.hub.processors;
 
+import com.blockwin.protocol_api.hub.model.MessageEnvelope;
 import com.blockwin.protocol_api.hub.model.Report;
 
 public interface ReportProcessor {
-    public Report process(String textMessage);
+    public Report process(MessageEnvelope messageEnvelope);
 }

@@ -28,15 +28,11 @@ class UptimeConsensusMechanismTest {
     }
 
     private UptimeReport report(UUID id, Status status, Continent c, long base) {
-        return new UptimeReport(
-                id,
-                "",
-                Instant.now(),
-                ReportType.UPTIME,
-                c,
-                status,
-                base, base, base, base, base
-        );
+        UptimeReport r = new UptimeReport("", Instant.now(), status, base, base, base, base, base);
+        r.setValidatorId(id);
+        r.setContinent(c);
+        r.setReportType(ReportType.UPTIME);
+        return r;
     }
 
     @Test
