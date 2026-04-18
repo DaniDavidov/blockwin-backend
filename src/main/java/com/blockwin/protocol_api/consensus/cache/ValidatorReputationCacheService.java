@@ -27,6 +27,21 @@ public class ValidatorReputationCacheService {
         redis.opsForHash().putAll(key(validatorId), map);
     }
 
+    public void cacheValidators(Map<UUID, Integer> reputations) {
+        if (reputations.isEmpty()) {
+            return;
+        }
+        byte[] field = "reliabilityBps".getBytes();
+        redis.executePipelined((RedisCallback<?>) connection -> {
+            for (Map.Entry<UUID, Integer> e : reputations.entrySet()) {
+                byte[] keyBytes = key(e.getKey()).getBytes();
+                byte[] value = String.valueOf(e.getValue()).getBytes();
+                connection.hashCommands().hSet(keyBytes, field, value);
+            }
+            return null;
+        });
+    }
+
     public Map<UUID, Integer> fetchReputations(Set<UUID> validatorIds) {
 
         List<Object> results = redis.executePipelined((RedisCallback<?>) connection -> {

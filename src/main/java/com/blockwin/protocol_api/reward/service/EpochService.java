@@ -1,18 +1,19 @@
 package com.blockwin.protocol_api.reward.service;
 
-import com.blockwin.protocol_api.reward.model.EpochParticipationEntity;
 import com.blockwin.protocol_api.reward.model.EpochParticipationId;
 import com.blockwin.protocol_api.reward.model.dto.ActiveEpoch;
-import com.blockwin.protocol_api.reward.repository.EpochParticipationRepository;
 import com.blockwin.protocol_api.reward.repository.PlatformEpochRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -27,8 +28,15 @@ import java.util.UUID;
 @Service
 public class EpochService {
 
-    private final EpochParticipationRepository epochParticipationRepository;
+    private static final String UPSERT_PARTICIPATION_SQL = """
+            INSERT INTO epoch_participation (validator_id, platform_url, epoch_id, rounds_participated)
+            VALUES (:validatorId, :platformUrl, :epochId, :increment)
+            ON CONFLICT (validator_id, platform_url, epoch_id)
+            DO UPDATE SET rounds_participated = epoch_participation.rounds_participated + EXCLUDED.rounds_participated
+            """;
+
     private final PlatformEpochRepository platformEpochRepository;
+    private final NamedParameterJdbcTemplate jdbc;
 
     /**
      * Derives the epoch ID (YYYYMMDD) from an arbitrary instant in UTC.
@@ -77,29 +85,24 @@ public class EpochService {
     }
 
     /**
-     * Records one round of participation for a validator in a given platform/epoch.
-     * Called from {@link com.blockwin.protocol_api.validator.service.ValidatorScoringService}
-     * on every {@code round.execution} Kafka event.
+     * Records participation increments for a batch of validator/platform/epoch keys
+     * in a single round trip. New rows are inserted with the supplied participation count.
+     * Existing rows get their {@code rounds_participated} increased by the same count
      *
-     * <p>Uses a read-then-update strategy within the caller's existing transaction.
+     * <p>Participates in the caller's transaction because the underlying DataSource
+     * is Spring-managed.
      */
-    public void recordParticipation(UUID validatorId, String platformUrl, long epochId) {
-        EpochParticipationId id = new EpochParticipationId(validatorId, platformUrl, epochId);
-        Optional<EpochParticipationEntity> existing = epochParticipationRepository.findById(id);
-
-        if (existing.isPresent()) {
-            EpochParticipationEntity entity = existing.get();
-            entity.setRoundsParticipated(entity.getRoundsParticipated() + 1);
-            epochParticipationRepository.save(entity);
-        } else {
-            epochParticipationRepository.save(
-                    EpochParticipationEntity.builder()
-                            .id(id)
-                            .roundsParticipated(1L)
-                            .build()
-            );
+    public void recordParticipationBatch(Map<EpochParticipationId, Long> increments) {
+        if (increments.isEmpty()) {
+            return;
         }
-
-        log.debug("Recorded participation: validator={} platform={} epoch={}", validatorId, platformUrl, epochId);
+        SqlParameterSource[] params = increments.entrySet().stream()
+                .map(e -> new MapSqlParameterSource()
+                        .addValue("validatorId", e.getKey().getValidatorId())
+                        .addValue("platformUrl", e.getKey().getPlatformUrl())
+                        .addValue("epochId", e.getKey().getEpochId())
+                        .addValue("increment", e.getValue()))
+                .toArray(SqlParameterSource[]::new);
+        jdbc.batchUpdate(UPSERT_PARTICIPATION_SQL, params);
     }
 }

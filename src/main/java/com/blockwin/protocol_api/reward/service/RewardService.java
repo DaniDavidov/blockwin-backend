@@ -188,6 +188,7 @@ public class RewardService {
         }
 
         List<byte[]> leaves = new ArrayList<>();
+        List<EpochParticipationEntity> toPersist = new ArrayList<>(slices.size());
         for (ValidatorSlice slice : slices) {
             BigInteger rewardAmount = totalWeightedShares > 0
                     ? rewardPot.multiply(BigInteger.valueOf(slice.weightedShare()))
@@ -195,13 +196,14 @@ public class RewardService {
                     : BigInteger.ZERO;
 
             slice.participation().setRewardAmount(rewardAmount);
-            epochParticipationRepository.save(slice.participation());
+            toPersist.add(slice.participation());
 
             // Only include in the Merkle tree if there is actually a reward to claim.
             if (rewardAmount.compareTo(BigInteger.ZERO) > 0) {
                 leaves.add(computeLeaf(websiteId32, epochId, slice.ethAddress(), rewardAmount));
             }
         }
+        epochParticipationRepository.saveAll(toPersist);
 
         if (leaves.isEmpty()) {
             throw new IllegalStateException(

@@ -3,6 +3,7 @@ package com.blockwin.protocol_api.validator.service;
 import com.blockwin.protocol_api.consensus.cache.ValidatorReputationCacheService;
 import com.blockwin.protocol_api.consensus.model.ConsensusResult;
 import com.blockwin.protocol_api.hub.model.ExecutedRound;
+import com.blockwin.protocol_api.reward.model.EpochParticipationId;
 import com.blockwin.protocol_api.reward.service.EpochService;
 import com.blockwin.protocol_api.validator.model.PlatformRoundId;
 import com.blockwin.protocol_api.validator.model.RoundScoreEntity;
@@ -17,6 +18,9 @@ import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -42,23 +46,6 @@ public class ValidatorScoringService {
         return (int) (correctReports * MAX_BPS / totalReports);
     }
 
-    private void updateValidatorReputation(UUID validatorId, Boolean isCorrect) {
-        Optional<ValidatorEntity> validatorOpt = validatorRepository.findById(validatorId);
-        if (validatorOpt.isEmpty()) {
-            return;
-        }
-        ValidatorEntity validatorEntity = validatorOpt.get();
-        if (isCorrect) {
-            validatorEntity.setCorrectReports(validatorEntity.getCorrectReports() + 1);
-        }
-        validatorEntity.setTotalReports(validatorEntity.getTotalReports() + 1);
-        long correctReports = validatorEntity.getCorrectReports() + VIRTUAL_CORRECT_REPORTS;
-        long totalReports = validatorEntity.getTotalReports() + VIRTUAL_TOTAL_REPORTS;
-        int reputation = (int) (correctReports * MAX_BPS / totalReports);
-        validatorRepository.save(validatorEntity);
-        reputationCacheService.cacheValidator(validatorId, reputation);
-    }
-
     private void persistExecutedRound(ExecutedRound executedRound) {
         RoundScoreEntity roundScoreEntity = RoundScoreEntity.builder()
                 .roundId(new PlatformRoundId(executedRound.roundId(), executedRound.platformUrl()))
@@ -81,12 +68,38 @@ public class ValidatorScoringService {
             return;
         }
         long epochId = EpochService.toEpochId(round.startTimestamp());
+
+        Map<UUID, long[]> deltas = new HashMap<>();
+        Map<EpochParticipationId, Long> participationIncrements = new HashMap<>();
         for (ConsensusResult r : round.consensusResults()) {
             r.getValidatorCorrectness().forEach((validatorId, isCorrect) -> {
-                updateValidatorReputation(validatorId, isCorrect);
-                epochService.recordParticipation(validatorId, round.platformUrl(), epochId);
+                long[] d = deltas.computeIfAbsent(validatorId, k -> new long[2]);
+                d[0] += 1;
+                if (Boolean.TRUE.equals(isCorrect)) {
+                    d[1] += 1;
+                }
+                EpochParticipationId key = new EpochParticipationId(validatorId, round.platformUrl(), epochId);
+                participationIncrements.merge(key, 1L, Long::sum);
             });
         }
+
+        if (!deltas.isEmpty()) {
+            List<ValidatorEntity> validators = validatorRepository.findAllById(deltas.keySet());
+            Map<UUID, Integer> reputationsToCache = new HashMap<>(validators.size());
+            for (ValidatorEntity v : validators) {
+                long[] d = deltas.get(v.getUuid());
+                v.setTotalReports(v.getTotalReports() + d[0]);
+                v.setCorrectReports(v.getCorrectReports() + d[1]);
+                long correct = v.getCorrectReports() + VIRTUAL_CORRECT_REPORTS;
+                long total = v.getTotalReports() + VIRTUAL_TOTAL_REPORTS;
+                reputationsToCache.put(v.getUuid(), (int) (correct * MAX_BPS / total));
+            }
+            validatorRepository.saveAll(validators);
+            reputationCacheService.cacheValidators(reputationsToCache);
+        }
+
+        epochService.recordParticipationBatch(participationIncrements);
+
         persistExecutedRound(round);
         ack.acknowledge();
     }

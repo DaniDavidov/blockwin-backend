@@ -1,8 +1,6 @@
 package com.blockwin.protocol_api.reward.service;
 
-import com.blockwin.protocol_api.reward.model.EpochParticipationEntity;
 import com.blockwin.protocol_api.reward.model.EpochParticipationId;
-import com.blockwin.protocol_api.reward.repository.EpochParticipationRepository;
 import com.blockwin.protocol_api.reward.repository.PlatformEpochRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,9 +8,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 import java.time.Instant;
-import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,10 +23,10 @@ import static org.mockito.Mockito.*;
 class EpochServiceTest {
 
     @Mock
-    private EpochParticipationRepository repository;
+    private PlatformEpochRepository platformEpochRepository;
 
     @Mock
-    private PlatformEpochRepository platformEpochRepository;
+    private NamedParameterJdbcTemplate jdbc;
 
     @InjectMocks
     private EpochService epochService;
@@ -39,7 +40,6 @@ class EpochServiceTest {
 
     @Test
     void toEpochId_weeklyPeriodsWithinSameMonth_areDistinct() {
-        // Four consecutive weekly periods in April 2026 must all get different epoch IDs
         long week1 = EpochService.toEpochId(Instant.parse("2026-04-01T00:00:00Z"));
         long week2 = EpochService.toEpochId(Instant.parse("2026-04-08T00:00:00Z"));
         long week3 = EpochService.toEpochId(Instant.parse("2026-04-15T00:00:00Z"));
@@ -53,7 +53,6 @@ class EpochServiceTest {
 
     @Test
     void toEpochId_boundaryAtMonthStart_isCorrect() {
-        // Midnight UTC on 1 April 2026 - first instant of April
         assertEquals(20260401L, EpochService.toEpochId(Instant.parse("2026-04-01T00:00:00Z")));
     }
 
@@ -69,64 +68,24 @@ class EpochServiceTest {
     }
 
     @Test
-    void recordParticipation_newRecord_savesEntityWithCountOne() {
-        UUID validatorId = UUID.randomUUID();
-        String platformUrl = "example.com";
-        long epochId = 20260401L;
-        EpochParticipationId id = new EpochParticipationId(validatorId, platformUrl, epochId);
-
-        when(repository.findById(id)).thenReturn(Optional.empty());
-
-        epochService.recordParticipation(validatorId, platformUrl, epochId);
-
-        ArgumentCaptor<EpochParticipationEntity> captor =
-                ArgumentCaptor.forClass(EpochParticipationEntity.class);
-        verify(repository).save(captor.capture());
-        assertEquals(id, captor.getValue().getId());
-        assertEquals(1L, captor.getValue().getRoundsParticipated());
+    void recordParticipationBatch_emptyMap_skipsJdbcCall() {
+        epochService.recordParticipationBatch(Map.of());
+        verifyNoInteractions(jdbc);
     }
 
     @Test
-    void recordParticipation_existingRecord_incrementsRoundsParticipated() {
-        UUID validatorId = UUID.randomUUID();
-        String platformUrl = "example.com";
+    void recordParticipationBatch_issuesSingleBatchUpdateWithOneParamPerKey() {
+        UUID v1 = UUID.randomUUID();
+        UUID v2 = UUID.randomUUID();
         long epochId = 20260401L;
-        EpochParticipationId id = new EpochParticipationId(validatorId, platformUrl, epochId);
+        Map<EpochParticipationId, Long> increments = new HashMap<>();
+        increments.put(new EpochParticipationId(v1, "example.com", epochId), 1L);
+        increments.put(new EpochParticipationId(v2, "example.com", epochId), 3L);
 
-        EpochParticipationEntity existing = EpochParticipationEntity.builder()
-                .id(id)
-                .roundsParticipated(5L)
-                .build();
-        when(repository.findById(id)).thenReturn(Optional.of(existing));
+        epochService.recordParticipationBatch(increments);
 
-        epochService.recordParticipation(validatorId, platformUrl, epochId);
-
-        verify(repository).save(existing);
-        assertEquals(6L, existing.getRoundsParticipated());
-    }
-
-    @Test
-    void recordParticipation_calledTwice_counterReachesTwo() {
-        UUID validatorId = UUID.randomUUID();
-        String platformUrl = "example.com";
-        long epochId = 20260401L;
-        EpochParticipationId id = new EpochParticipationId(validatorId, platformUrl, epochId);
-
-        // First call: no existing record
-        when(repository.findById(id)).thenReturn(Optional.empty());
-        epochService.recordParticipation(validatorId, platformUrl, epochId);
-
-        ArgumentCaptor<EpochParticipationEntity> captor =
-                ArgumentCaptor.forClass(EpochParticipationEntity.class);
-        verify(repository).save(captor.capture());
-        EpochParticipationEntity saved = captor.getValue();
-
-        // Second call: the saved entity now exists
-        reset(repository);
-        when(repository.findById(id)).thenReturn(Optional.of(saved));
-        epochService.recordParticipation(validatorId, platformUrl, epochId);
-
-        verify(repository).save(saved);
-        assertEquals(2L, saved.getRoundsParticipated());
+        ArgumentCaptor<SqlParameterSource[]> captor = ArgumentCaptor.forClass(SqlParameterSource[].class);
+        verify(jdbc).batchUpdate(contains("INSERT INTO epoch_participation"), captor.capture());
+        assertEquals(2, captor.getValue().length);
     }
 }
