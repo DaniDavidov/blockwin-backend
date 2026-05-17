@@ -76,6 +76,7 @@ public class ValidatorStakingService {
 
         BigInteger unstakeAmount = computeUnstakeAmount(validatorId, tx.getAmount());
 
+        // TODO: unsafe signature - vulnerable to replay attack and cross-chain replay attack
         String unstakeSignature = sign(tx.getChainName().name(), validatorAddress, unstakeAmount);
 
         validatorService.setValidatorStatus(validatorId, ValidatorStatus.NO_STAKE);

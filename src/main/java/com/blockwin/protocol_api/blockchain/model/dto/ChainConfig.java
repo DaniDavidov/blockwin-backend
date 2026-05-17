@@ -9,6 +9,7 @@ public class ChainConfig {
     private Integer requiredConfirmations;
     private String stakingContract;
     private String rewardContract;
+    private String platformRegistry;
 
     /**
      * Private key used by the API to sign publishRoot transactions.

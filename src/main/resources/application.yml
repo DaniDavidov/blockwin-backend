@@ -1,11 +1,12 @@
 blockchain:
     chains:
-        ethereum:
+        ETHEREUM:
             chain-id: 31337
             required-confirmations: 1
             rpc-url: http://127.0.0.1:8545
-            staking-contract: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+            staking-contract: ${STAKING_CONTRACT_ADDRESS}
             reward-contract: ${REWARD_CONTRACT_ADDRESS}
+            platform-registry: ${PLATFORM_REGISTRY_CONTRACT_ADDRESS}
             api-private-key: ${API_PRIVATE_KEY}
 security:
     aes:
@@ -31,7 +32,7 @@ spring:
     jpa:
         defer-datasource-initialization: true
         hibernate:
-            ddl-auto: create-drop
+            ddl-auto: create
         open-in-view: false
         properties:
             hibernate:
@@ -64,3 +65,7 @@ spring:
     sql:
         init:
             mode: always
+
+logging:
+    level:
+        org.hibernate.tool.schema: DEBUG

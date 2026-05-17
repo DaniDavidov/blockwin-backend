@@ -17,9 +17,11 @@ import org.web3j.protocol.core.methods.response.Log;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @AllArgsConstructor
 @Service
@@ -54,31 +56,33 @@ public class TransactionManagementService {
                 .txHash(txHash)
                 .validatorAddress(validatorAddress)
                 .amount(amount)
-                .chainName(ChainName.valueOf(chainName))
+                .chainName(ChainName.valueOf(chainName.toUpperCase()))
                 .timestamp(Instant.now())
                 .build();
         transactionRepository.save(tx);
     }
 
     @Transactional
-    public void validateRewardDeposit(DepositRewardRequest request) {
+    public BigInteger validateRewardDeposit(UUID platformId, DepositRewardRequest request) {
         ChainConfig chainConfig = blockchainConfig.getChain(request.chainName());
         List<Type> decodedParams = validateDeposit(
                 request.txHash(),
                 request.chainName(),
-                chainConfig.getRewardContract(),
+                chainConfig.getPlatformRegistry(),
                 ContractEvent.REWARD_DEPOSITED_EVENT
         );
         String eventOwner = (String) decodedParams.get(0).getValue();
-        String eventPlatformUrl = (String) decodedParams.get(1).getValue();
+        byte[] eventPlatformId = (byte[]) decodedParams.get(1).getValue();
+        BigInteger eventAmount = (BigInteger) decodedParams.get(2).getValue();
 
         if (!eventOwner.equalsIgnoreCase(request.platformOwnerAddress())) {
             throw new IllegalArgumentException(
                     "Platform owner address mismatch: expected " + request.platformOwnerAddress() + ", got " + eventOwner);
         }
-        if (!eventPlatformUrl.equals(request.platformUrl())) {
-            throw new IllegalArgumentException("Platform URL mismatch in deposit event");
+        if (!validatePlatformId(platformId, eventPlatformId)) {
+            throw new IllegalArgumentException("Platform ID mismatch in deposit event");
         }
+        return eventAmount;
     }
 
     /**
@@ -95,7 +99,7 @@ public class TransactionManagementService {
     @Transactional
     public List<Type> validateDeposit(String txHash, String chainName, String contractAddress, Event event) {
         Optional<Transaction> txOpt = transactionRepository.findByTxHashAndChainName(
-                txHash, ChainName.valueOf(chainName));
+                txHash, ChainName.valueOf(chainName.toUpperCase()));
         if (txOpt.isPresent()) {
             throw new RuntimeException("Transaction already exists");
         }
@@ -103,5 +107,22 @@ public class TransactionManagementService {
         TransactionReceipt receipt = multiChainService.getTransactionReceipt(chainName, txHash);
         Log log = EventDecoder.findLogBySignature(receipt, contractAddress, event);
         return EventDecoder.decodeEventLog(log, event);
+    }
+
+    private boolean validatePlatformId(UUID platformId, byte[] eventPlatformId) {
+        if (eventPlatformId.length != 32) {
+            return false;
+        }
+        byte[] encoded = new byte[32];
+        ByteBuffer.wrap(encoded)
+                .putLong(platformId.getMostSignificantBits())
+                .putLong(platformId.getLeastSignificantBits());
+
+        for (int i = 0; i < eventPlatformId.length; i++) {
+            if (encoded[i] != eventPlatformId[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 }

@@ -3,6 +3,7 @@ package com.blockwin.protocol_api.reward.service;
 import com.blockwin.protocol_api.blockchain.config.BlockchainConfig;
 import com.blockwin.protocol_api.blockchain.model.dto.ChainConfig;
 import com.blockwin.protocol_api.blockchain.service.MultiChainService;
+import com.blockwin.protocol_api.blockchain.service.SignatureService;
 import com.blockwin.protocol_api.blockchain.service.TransactionManagementService;
 import com.blockwin.protocol_api.platform.event.CachePlatformEvent;
 import com.blockwin.protocol_api.platform.model.PlatformEntity;
@@ -73,6 +74,7 @@ public class RewardService {
     private final MultiChainService multiChainService;
     private final BlockchainConfig blockchainConfig;
     private final TransactionManagementService transactionManagementService;
+    private final SignatureService signatureService;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
@@ -88,6 +90,11 @@ public class RewardService {
      */
     @Transactional
     public void verifyRewardDeposit(UUID platformId, DepositRewardRequest request) {
+        String recoveredAddress = signatureService.recoverSignerAddress(request.txHash(), request.signature());
+        if (!recoveredAddress.equalsIgnoreCase(request.platformOwnerAddress())) {
+            throw new IllegalArgumentException("Signature does not match platform owner address");
+        }
+
         PlatformEntity platform = platformRepository.findById(platformId)
                 .orElseThrow(() -> new IllegalArgumentException("Platform not found: " + platformId));
 
@@ -101,12 +108,12 @@ public class RewardService {
                     "Reward pot already deposited for platform " + platformId + " epoch " + epochKey);
         }
 
-        transactionManagementService.validateRewardDeposit(request);
+        BigInteger verifiedAmount = transactionManagementService.validateRewardDeposit(platformId, request);
 
         PlatformEpochEntity entity = PlatformEpochEntity.builder()
                 .id(epochKey)
                 .depositTxHash(request.txHash())
-                .rewardPot(request.amount())
+                .rewardPot(verifiedAmount)
                 .validationEndTimestamp(validationEndTimestamp)
                 .validationStartTimestamp(validationStartTimestamp)
                 .chainName(ChainName.valueOf(request.chainName().toUpperCase()))
@@ -125,7 +132,7 @@ public class RewardService {
         applicationEventPublisher.publishEvent(event);
 
         log.info("Reward pot deposited: platformId={} epochId={} amount={} txHash={}",
-                platformId, epochId, request.amount(), request.txHash());
+                platformId, epochId, verifiedAmount, request.txHash());
     }
 
     /**

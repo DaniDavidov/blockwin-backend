@@ -39,7 +39,7 @@ public class ValidatorService {
         validatorEntity.setCountry(Country.valueOf(registerValidatorRequest.country()));
         validatorEntity.setContinent(Continent.valueOf(registerValidatorRequest.continent()));
         validatorEntity.setUuid(validatorId);
-        validatorEntity.setStatus(ValidatorStatus.INACTIVE);
+        validatorEntity.setStatus(ValidatorStatus.NO_STAKE);
         validatorEntity.setCreatedAt(Instant.now());
         ValidatorEntity savedValidator = validatorRepository.saveAndFlush(validatorEntity);
 
@@ -47,7 +47,7 @@ public class ValidatorService {
         validatorChainEntity.setValidator(savedValidator);
         validatorChainEntity.setChainId(registerValidatorRequest.chainId());
         validatorChainEntity.setChainName(ChainName.valueOf(registerValidatorRequest.chainName()));
-        validatorChainEntity.setPublicKey(registerValidatorRequest.publicKey());
+        validatorChainEntity.setPublicKey(registerValidatorRequest.publicKey().toLowerCase());
         chainRepository.saveAndFlush(validatorChainEntity);
         return savedValidator.getUuid();
     }
