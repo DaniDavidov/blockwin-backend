@@ -18,6 +18,8 @@ The system emphasizes:
 
 The system uses a **Proof-of-Stake-like validator registration flow**:
 
+<img width="1778" height="598" alt="01-stake" src="https://github.com/user-attachments/assets/96a22501-1f1c-4c01-96b9-4c55e0dc63aa" />
+
 1. Validator stakes tokens in a smart contract
 2. Validator submits to backend:
     - Transaction hash
@@ -42,6 +44,8 @@ This ensures:
 ## **2. Communication Layer (WebSocket)**
 
 The communication layer is responsible for securely onboarding validators and maintaining efficient, stateful, bidirectional communication via WebSockets. This layer is designed for **low-latency ingestion**, **secure identity verification**, and **connection-aware state management**.
+
+<img width="1736" height="710" alt="02-communication-layer" src="https://github.com/user-attachments/assets/2644eba4-4940-4b5c-be4c-5cf82920daa6" />
 
 #### **2.1 WebSocket Authentication Flow**
 
@@ -128,6 +132,8 @@ Design considerations:
 
 ## **3. Ingestion Pipeline**
 The ingestion pipeline is responsible for transforming incoming validator messages into structured, processable data and reliably feeding them into the round-based consensus system. It is designed around **decoupling, concurrency, and backpressure control**.
+
+<img width="1520" height="862" alt="03-ingestion-pipeline" src="https://github.com/user-attachments/assets/c08b1afc-3799-448d-8a91-33dd441a2be4" />
 
 ---
 
@@ -233,6 +239,8 @@ At its heart, this layer ensures that:
 - Each group (round) has a **strict lifecycle**
 - State transitions are **atomic and race-condition safe**
 
+<img width="1628" height="1122" alt="04-Round-Based State Management" src="https://github.com/user-attachments/assets/e015ab6a-26d2-4c6e-add6-4f18ad759b68" />
+
 ---
 
 #### **4.1 RoundState as the Core Aggregation Unit**
@@ -333,8 +341,6 @@ Each round follows a strict lifecycle:
 
 #### **4.5 Atomic State Reset (Critical Section)**
 
-One of the most important parts of your design is **safe round resetting**.
-
 The challenge:
 
 - Avoid a gap between removing old state and inserting new state
@@ -383,7 +389,7 @@ This guarantees:
 
 ---
 
-#### **4.7 Validator Participation Tracking (Bitmap Integration)**
+#### **4.7 Validator Participation Tracking**
 
 Each `RoundState` includes:
 ```java
@@ -543,7 +549,7 @@ After regional execution:
 
 Special handling:
 
-- If validator behaves inconsistently across regions → marked faulty
+- If validator behaves inconsistently across regions - marked faulty
 
 ---
 
@@ -592,21 +598,7 @@ This drastically reduces:
 
 ---
 
-## **9. Round Execution Engine**
-
-Execution is handled by **worker threads**:
-
-- Threads continuously poll expired rounds from DelayQueue
-- Execute consensus
-- Emit result event
-
-### Flow:
-
-DelayQueue → Execution Worker → Consensus → Kafka Event
-
----
-
-## **10. Kafka Event System**
+## **9. Kafka Event System**
 
 After consensus:
 
@@ -631,50 +623,8 @@ round.execution
 
 ---
 
-## **11. Idempotency & Round Tracking**
-
-Each round is uniquely identified by:
-
-(platformId, roundId)
-
-Ensures:
-
-- No duplicate processing
-- Safe retries
-- Consistency across services
-
----
-
-## **12. Database Design (Health Module)**
-
-Stores:
-
-- Global round results
-- Regional breakdown
-- Latency metrics
-- Validator correctness
-
-Optimized for:
-
-- Fast writes during ingestion
-- Efficient reads for analytics
-
----
-
-## **13. Scalability Considerations**
-
-The system is designed to scale:
-
-- Stateless workers
-- Kafka-based async processing
-- Redis for low-latency reads
-- Modular architecture → microservice-ready
-
----
-
-## **14. Future Improvements**
+## **10. Future Improvements**
 
 - TLS consensus mechanism
 - Content validation consensus
-- Rewarding mechanism
 - Improved thread pools
