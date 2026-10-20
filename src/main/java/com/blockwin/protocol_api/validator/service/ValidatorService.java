@@ -12,6 +12,7 @@ import com.blockwin.protocol_api.validator.repository.ValidatorChainRepository;
 import com.blockwin.protocol_api.validator.repository.ValidatorRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -20,6 +21,7 @@ import java.util.UUID;
 
 import static com.blockwin.protocol_api.common.utils.Constants.*;
 
+@Slf4j
 @AllArgsConstructor
 @Service
 public class ValidatorService {
@@ -29,7 +31,7 @@ public class ValidatorService {
     @Transactional
     public UUID registerValidator(RegisterValidatorRequest registerValidatorRequest) {
         UUID validatorId = ValidatorId.generateUUID(registerValidatorRequest.chainId(), registerValidatorRequest.publicKey());
-
+        log.info("Registering validator {}", validatorId);
         if (validatorRepository.existsById(validatorId)) {
             throw new IllegalStateException("Validator already registered. Please verify your stake via /stake/verify");
         }

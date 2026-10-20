@@ -32,7 +32,7 @@ spring:
     jpa:
         defer-datasource-initialization: true
         hibernate:
-            ddl-auto: create
+            ddl-auto: update
         open-in-view: false
         properties:
             hibernate:
@@ -68,4 +68,5 @@ spring:
 
 logging:
     level:
+        org.springframework.security: DEBUG
         org.hibernate.tool.schema: DEBUG

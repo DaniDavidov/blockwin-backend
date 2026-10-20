@@ -10,7 +10,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Data
-@JsonIgnoreProperties(value = {"validatorId", "continent", "reportType"}, ignoreUnknown = true)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public abstract class Report {
     @Setter
     private UUID validatorId;
