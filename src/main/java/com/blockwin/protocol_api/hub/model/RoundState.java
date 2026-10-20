@@ -18,24 +18,22 @@ public class RoundState implements Delayed {
     private final Instant registrationTimestamp;
     private long roundId;
     private long lastRoundId;
-    private boolean finalized;
-    private Instant startTimestamp;
-    private Instant expiration;
+    // Fixed slot [startTimestamp, expiration), set at construction — never derived from report arrival.
+    private final Instant startTimestamp;
+    private final Instant expiration;
     private final ConcurrentHashMap<UUID, ReportBitmap> bitmapByValidator = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<ReportType, List<Report>> reportsByType = new ConcurrentHashMap<>();
 
+    /** First round of a validation period: its slot starts at the validation start. */
     public RoundState(UUID platformId, String platformURL, long checkIntervalSeconds, Instant registrationTimestamp, long lastRoundId) {
-        this.reportsByType.put(ReportType.UPTIME, new ArrayList<>());
-        this.platformId = platformId;
-        this.platformURL = platformURL;
-        this.checkIntervalSeconds = checkIntervalSeconds;
-        this.registrationTimestamp = registrationTimestamp;
-        this.roundId = 0;
-        this.lastRoundId = lastRoundId;
+        this(platformId, platformURL, checkIntervalSeconds, registrationTimestamp, lastRoundId, 0, registrationTimestamp);
     }
 
-    /** Used when resetting after a completed round — roundId is already known. */
-    public RoundState(UUID platformId, String platformURL, long checkIntervalSeconds, Instant registrationTimestamp, long lastRoundId, long roundId) {
+    /**
+     * A round whose slot starts at {@code startTimestamp} — the previous round's expiration when
+     * resetting, or the current slot's start when recovering after a restart.
+     */
+    public RoundState(UUID platformId, String platformURL, long checkIntervalSeconds, Instant registrationTimestamp, long lastRoundId, long roundId, Instant startTimestamp) {
         this.reportsByType.put(ReportType.UPTIME, new ArrayList<>());
         this.platformId = platformId;
         this.platformURL = platformURL;
@@ -43,6 +41,8 @@ public class RoundState implements Delayed {
         this.registrationTimestamp = registrationTimestamp;
         this.roundId = roundId;
         this.lastRoundId = lastRoundId;
+        this.startTimestamp = startTimestamp;
+        this.expiration = startTimestamp.plusSeconds(checkIntervalSeconds);
     }
 
     @Override
