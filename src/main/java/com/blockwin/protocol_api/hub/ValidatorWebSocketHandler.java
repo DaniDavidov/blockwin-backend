@@ -58,6 +58,7 @@ public class ValidatorWebSocketHandler extends TextWebSocketHandler {
         UUID validatorId = (UUID) session.getAttributes().get("validatorId");
         validatorService.setValidatorStatus(validatorId, ValidatorStatus.INACTIVE);
         connectionRegistry.unregister(validatorId);
+        log.info("Validator {} closed", validatorId);
     }
 
     @Override

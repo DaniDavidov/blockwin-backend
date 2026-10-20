@@ -62,7 +62,7 @@ public class ValidatorReputationCacheService {
             UUID id = iterator.next();
             reputations.put(
                     id,
-                    r == null ? 5000 : Integer.parseInt(new String((byte[]) r))
+                    r == null ? 5000 : Integer.parseInt((String) r)
             );
         }
         return reputations;

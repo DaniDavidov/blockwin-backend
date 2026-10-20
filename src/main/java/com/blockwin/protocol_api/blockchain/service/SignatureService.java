@@ -50,6 +50,19 @@ public class SignatureService {
         }
     }
 
+    /**
+     * Recovers the signer of an EIP-191 personal_sign signature without challenge validation.
+     * Use only when the signed message is itself single-use (e.g. a deposit tx hash bound
+     * to the signer by an on-chain event).
+     */
+    public String recoverSignerAddressUnchecked(String message, String signature) {
+        try {
+            return recoverAddress(message, signature);
+        } catch (SignatureException e) {
+            throw new IllegalArgumentException("Invalid signature", e);
+        }
+    }
+
     private String recoverAddress(String message, String signature)
             throws SignatureException {
 

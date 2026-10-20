@@ -29,13 +29,6 @@ public class HealthAggregationService {
         this.healthServices.put(ReportType.UPTIME, uptimeHealthService);
     }
 
-    private void persistExecutedRound(ExecutedRound executedRound) {
-        RoundHealthEntity roundHealthEntity = RoundHealthEntity.builder()
-                .roundId(new RoundId(executedRound.roundId(), executedRound.platformUrl()))
-                .build();
-        roundHealthRepository.save(roundHealthEntity);
-    }
-
     @KafkaListener(
             topics = "round.execution",
             groupId = "health-aggregation-group"
@@ -53,8 +46,6 @@ public class HealthAggregationService {
             HealthService healthService = healthServices.get(mechanismType);
             healthService.accountHealth(round.roundId(), round.platformUrl(), result);
         });
-
-        persistExecutedRound(round);
 
         ack.acknowledge();
     }

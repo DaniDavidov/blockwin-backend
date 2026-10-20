@@ -60,9 +60,11 @@ public class UptimeHealthService implements HealthService {
                 .toList();
         reportRepository.saveAll(reports);
 
+        // Only continents that submitted reports appear in the consensus maps.
         List<UptimeRegionResultEntity> regionResults = new ArrayList<>();
-        for (Continent continent : Continent.values()) {
-            ReportCategory reportCategory = uptimeConsensusResult.categoryByRegion().get(continent);
+        for (Map.Entry<Continent, ReportCategory> entry : uptimeConsensusResult.categoryByRegion().entrySet()) {
+            Continent continent = entry.getKey();
+            ReportCategory reportCategory = entry.getValue();
             Latency latency = uptimeConsensusResult.latencyByRegion().get(continent);
             UptimeRegionResultEntity regionResult = UptimeRegionResultEntity.builder()
                     .category(reportCategory.toString())

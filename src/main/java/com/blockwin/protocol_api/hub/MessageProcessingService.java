@@ -69,7 +69,11 @@ public class MessageProcessingService {
                 .computeIfAbsent(incomingReport.getValidatorId(), uuid -> new ReportBitmap());
         boolean success = bitmap.markSubmitted(incomingReport.getReportType());
         if (!success) {
-            throw new RuntimeException("The validator has already submitted a report for this round.");
+            // Expected when the validator's schedule drifts against the round boundary — drop, don't fail.
+            log.warn("Duplicate {} report from validator {} for {} round {} dropped",
+                    incomingReport.getReportType(), incomingReport.getValidatorId(),
+                    incomingReport.getPlatformUrl(), state.getRoundId());
+            return;
         }
 
         if (state.getStartTimestamp() == null) {
@@ -104,6 +108,9 @@ public class MessageProcessingService {
                     persistReport(report);
                 } catch (InterruptedException e) {
                     log.atError().log(e.getMessage());
+                } catch (RuntimeException e) {
+                    // Never let a single bad message kill the worker; the thread is not restarted.
+                    log.error("Failed to process report, message dropped: {}", e.getMessage(), e);
                 }
             }
         });

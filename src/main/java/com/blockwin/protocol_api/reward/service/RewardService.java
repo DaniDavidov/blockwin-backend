@@ -90,7 +90,7 @@ public class RewardService {
      */
     @Transactional
     public void verifyRewardDeposit(UUID platformId, DepositRewardRequest request) {
-        String recoveredAddress = signatureService.recoverSignerAddress(request.txHash(), request.signature());
+        String recoveredAddress = signatureService.recoverSignerAddressUnchecked(request.txHash(), request.signature());
         if (!recoveredAddress.equalsIgnoreCase(request.platformOwnerAddress())) {
             throw new IllegalArgumentException("Signature does not match platform owner address");
         }

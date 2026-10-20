@@ -117,6 +117,9 @@ public class ExecutionService {
                     notifyForConsensusResult(executedRound);
                 } catch (InterruptedException e) {
                     log.error(e.getMessage());
+                } catch (RuntimeException e) {
+                    // Never let a single failed round kill the worker; the thread is not restarted.
+                    log.error("Failed to execute round: {}", e.getMessage(), e);
                 }
             }
         });
