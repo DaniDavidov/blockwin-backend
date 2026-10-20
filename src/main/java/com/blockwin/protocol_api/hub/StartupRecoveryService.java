@@ -12,6 +12,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -66,7 +67,12 @@ public class StartupRecoveryService {
                     - epoch.validationStartTimestamp().getEpochSecond()) / interval;
 
             Long lastCompleted = lastRoundIds.get(platform.url());
-            long resumeRoundId = (lastCompleted != null) ? lastCompleted + 1 : 0L;
+            long nextUncompleted = (lastCompleted != null) ? lastCompleted + 1 : 0L;
+            // Resume at the slot that is open now; slots missed while the app was down are skipped.
+            long currentSlot = Math.max(0L,
+                    (Instant.now().getEpochSecond() - epoch.validationStartTimestamp().getEpochSecond()) / interval);
+            long resumeRoundId = Math.min(Math.max(nextUncompleted, currentSlot), lastRoundId);
+            Instant slotStart = epoch.validationStartTimestamp().plusSeconds(resumeRoundId * interval);
 
             RoundState state = new RoundState(
                     epoch.platformId(),
@@ -74,7 +80,8 @@ public class StartupRecoveryService {
                     interval,
                     epoch.validationStartTimestamp(),
                     lastRoundId,
-                    resumeRoundId
+                    resumeRoundId,
+                    slotStart
             );
             stateRegistry.registerState(state);
             log.info("Recovered platform={} resumeRoundId={} lastRoundId={}",

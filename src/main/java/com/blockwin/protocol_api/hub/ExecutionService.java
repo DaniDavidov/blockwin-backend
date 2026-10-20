@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -74,6 +75,8 @@ public class ExecutionService {
             return;
         }
         long nextRoundId = roundState.getRoundId() + 1;
+        // Slots are chained back-to-back from the validation start, independent of report arrival.
+        Instant nextStart = roundState.getExpiration();
         PlatformUpdateEvent update = stateUpdateRegistry.getUpdate(roundState.getPlatformURL());
         RoundState newRound;
         if (update == null) {
@@ -83,16 +86,19 @@ public class ExecutionService {
                     roundState.getCheckIntervalSeconds(),
                     roundState.getRegistrationTimestamp(),
                     roundState.getLastRoundId(),
-                    nextRoundId
+                    nextRoundId,
+                    nextStart
             );
         } else {
+            // Keep the validation-period start: the update's timestamp is the platform's creation date.
             newRound = new RoundState(
                     roundState.getPlatformId(),
                     update.getPlatformURL(),
                     update.getCheckIntervalSeconds(),
-                    update.getRegistrationTimestamp(),
+                    roundState.getRegistrationTimestamp(),
                     roundState.getLastRoundId(),
-                    nextRoundId
+                    nextRoundId,
+                    nextStart
             );
             stateUpdateRegistry.removeUpdate(update.getPlatformURL());
         }
@@ -104,8 +110,17 @@ public class ExecutionService {
             while (true) {
                 try {
                     RoundState roundState = this.stateRegistry.takeExpired();
-                    this.stateRegistry.removeState(roundState.getPlatformURL());
-                    resetRound(roundState);
+                    if (!this.stateRegistry.isCurrent(roundState)) {
+                        // Replaced (e.g. re-registered) after it was queued. Executing it would overwrite the live round.
+                        log.warn("Skipping stale round {} for {}", roundState.getRoundId(), roundState.getPlatformURL());
+                        continue;
+                    }
+                    resetRound(roundState); // atomically swaps in the next round, or closes the epoch
+                    if (roundState.getBitmapByValidator().isEmpty()) {
+                        log.debug("Round {} for {} had no reports, skipping consensus",
+                                roundState.getRoundId(), roundState.getPlatformURL());
+                        continue;
+                    }
                     List<ConsensusResult> consensusResults = this.consensusService.executeRound(roundState);
                     ExecutedRound executedRound = new ExecutedRound(
                             roundState.getRoundId(),

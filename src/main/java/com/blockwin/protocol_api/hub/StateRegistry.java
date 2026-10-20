@@ -17,18 +17,23 @@ public class StateRegistry {
     private final ConcurrentHashMap<String, RoundState> stateMap = new ConcurrentHashMap<>();
     private final DelayQueue<RoundState> expirationQueue = new DelayQueue<>();
 
+    // Every round is queued exactly once, by the single thread that creates it (deposit listener,
+    // startup recovery, or the execution worker that took the previous round off the queue).
     public void registerState(@NotNull RoundState state) {
         String platformURL = state.getPlatformURL();
         stateMap.put(platformURL, state);
+        expirationQueue.add(state);
     }
 
+    /** Atomically swaps in the next round so reports never see a gap between rounds. */
     public void resetState(@NotNull RoundState newState) {
         stateMap.compute(newState.getPlatformURL(), (key, oldState) -> newState);
+        expirationQueue.add(newState);
     }
 
-    public void launchState(@NotNull String platformURL) {
-        RoundState state = stateMap.get(platformURL);
-        expirationQueue.add(state);
+    /** True if {@code state} is still the live round for its platform (identity, not equality). */
+    public boolean isCurrent(@NotNull RoundState state) {
+        return stateMap.get(state.getPlatformURL()) == state;
     }
 
     public RoundState takeExpired() throws InterruptedException {

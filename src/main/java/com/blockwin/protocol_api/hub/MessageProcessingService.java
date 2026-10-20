@@ -64,6 +64,15 @@ public class MessageProcessingService {
             throw new RuntimeException("Unknown platform URL: " + incomingReport.getPlatformUrl());
         }
 
+        // The round's slot has closed but no worker has swapped in the next one yet; consensus may
+        // already be reading this round's reports, so don't append to them.
+        if (!Instant.now().isBefore(state.getExpiration())) {
+            log.warn("Late {} report from validator {} for {} round {} dropped (round expired at {})",
+                    incomingReport.getReportType(), incomingReport.getValidatorId(),
+                    incomingReport.getPlatformUrl(), state.getRoundId(), state.getExpiration());
+            return;
+        }
+
         ReportBitmap bitmap = state
                 .getBitmapByValidator()
                 .computeIfAbsent(incomingReport.getValidatorId(), uuid -> new ReportBitmap());
@@ -76,10 +85,6 @@ public class MessageProcessingService {
             return;
         }
 
-        if (state.getStartTimestamp() == null) {
-            initializeState(state);
-        }
-
         state.getReportsByType().computeIfPresent(
                 incomingReport.getReportType(),
                 (reportType, reports) -> {
@@ -87,13 +92,6 @@ public class MessageProcessingService {
                     return reports;
                 }
         );
-    }
-
-    private void initializeState(RoundState state) {
-        state.setFinalized(false);
-        state.setExpiration(Instant.now().plusSeconds(state.getCheckIntervalSeconds()));
-        state.setStartTimestamp(Instant.now());
-        stateRegistry.launchState(state.getPlatformURL());
     }
 
     private void startWorker() {
