@@ -43,6 +43,9 @@ public class ValidatorScoringService {
         ValidatorEntity validatorEntity = opt.get();
         long correctReports = validatorEntity.getCorrectReports();
         long totalReports = validatorEntity.getTotalReports();
+        if (totalReports == 0) {
+            return MAX_BPS / 2;
+        }
         return (int) (correctReports * MAX_BPS / totalReports);
     }
 

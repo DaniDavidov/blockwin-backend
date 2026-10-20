@@ -5,6 +5,7 @@ import com.blockwin.protocol_api.platform.event.PlatformUpdateEvent;
 import com.blockwin.protocol_api.platform.model.dto.PlatformDTO;
 import com.blockwin.protocol_api.platform.model.dto.PlatformExpiredNotification;
 import com.blockwin.protocol_api.platform.service.PlatformService;
+import com.blockwin.protocol_api.reward.service.RewardService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -28,7 +29,7 @@ public class BroadcastService {
     @Order(2)
     @EventListener
     public void onPlatformRegistered(CachePlatformEvent event) {
-        if (!(event.getSource() instanceof PlatformService)) {
+        if (!(event.getSource() instanceof RewardService)) {
             return;
         }
         broadcast(new PlatformDTO(event.getPlatformId(), event.getPlatformURL(), event.getCheckIntervalSeconds(), event.getValidationStartTimestamp()));

@@ -343,7 +343,7 @@ class RewardServiceTest {
     @Test
     void verifyRewardDeposit_alreadyActive_throwsIllegalStateExceptionWithoutCallingBlockchain() {
         DepositRewardRequest request = depositRequest(30);
-        when(signatureService.recoverSignerAddress(any(), any())).thenReturn(OWNER_ADDRESS);
+        when(signatureService.recoverSignerAddressUnchecked(any(), any())).thenReturn(OWNER_ADDRESS);
         when(platformRepository.findById(platformId)).thenReturn(Optional.of(platform));
         when(platformEpochRepository.existsByIdPlatformIdAndValidationEndTimestampAfter(
                 eq(platformId), any(Instant.class))).thenReturn(true);
@@ -359,7 +359,7 @@ class RewardServiceTest {
         DepositRewardRequest request = depositRequest(validationDays);
         long expectedEpochId = EpochService.toEpochId(Instant.now().plus(validationDays, ChronoUnit.DAYS));
 
-        when(signatureService.recoverSignerAddress(any(), any())).thenReturn(OWNER_ADDRESS);
+        when(signatureService.recoverSignerAddressUnchecked(any(), any())).thenReturn(OWNER_ADDRESS);
         when(platformRepository.findById(platformId)).thenReturn(Optional.of(platform));
         when(platformEpochRepository.existsByIdPlatformIdAndValidationEndTimestampAfter(
                 eq(platformId), any(Instant.class))).thenReturn(false);
@@ -384,7 +384,7 @@ class RewardServiceTest {
         int validationDays = 30;
         DepositRewardRequest request = depositRequest(validationDays);
 
-        when(signatureService.recoverSignerAddress(any(), any())).thenReturn(OWNER_ADDRESS);
+        when(signatureService.recoverSignerAddressUnchecked(any(), any())).thenReturn(OWNER_ADDRESS);
         when(platformRepository.findById(platformId)).thenReturn(Optional.of(platform));
         when(platformEpochRepository.existsByIdPlatformIdAndValidationEndTimestampAfter(
                 eq(platformId), any(Instant.class))).thenReturn(false);
