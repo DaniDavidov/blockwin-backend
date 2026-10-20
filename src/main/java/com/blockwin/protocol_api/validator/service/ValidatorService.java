@@ -54,6 +54,12 @@ public class ValidatorService {
         return savedValidator.getUuid();
     }
 
+    @Transactional
+    public int resetStatuses() {
+        return validatorRepository.resetStatus(ValidatorStatus.ACTIVE, ValidatorStatus.INACTIVE);
+    }
+
+
     public ValidatorEntity getValidator(UUID validatorId) {
         return validatorRepository
                 .findById(validatorId)

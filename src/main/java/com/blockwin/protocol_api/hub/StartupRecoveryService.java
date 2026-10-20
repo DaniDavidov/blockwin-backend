@@ -6,6 +6,7 @@ import com.blockwin.protocol_api.platform.model.dto.PlatformDTO;
 import com.blockwin.protocol_api.platform.service.PlatformService;
 import com.blockwin.protocol_api.reward.model.dto.ActiveEpoch;
 import com.blockwin.protocol_api.reward.service.EpochService;
+import com.blockwin.protocol_api.validator.service.ValidatorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -19,12 +20,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * Re-populates {@link StateRegistry} on startup with a blank {@link RoundState} for every
- * platform that has an active validation period. Runs after the full application context
- * is started ({@link ApplicationReadyEvent}) so all worker threads are already initialised
- * and blocking on their queues.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -33,8 +28,16 @@ public class StartupRecoveryService {
     private final EpochService epochService;
     private final PlatformService platformService;
     private final UptimeHealthService uptimeHealthService;
+    private final ValidatorService validatorService;
     private final StateRegistry stateRegistry;
 
+
+    /**
+     * Re-populates {@link StateRegistry} on startup with a blank {@link RoundState} for every
+     * platform that has an active validation period. Runs after the full application context
+     * is started ({@link ApplicationReadyEvent}) so all worker threads are already initialised
+     * and blocking on their queues.
+     */
     @EventListener(ApplicationReadyEvent.class)
     public void recoverActiveRounds() {
         List<ActiveEpoch> activeEpochs = epochService.findAllActivePlatformEpochs();
@@ -89,5 +92,16 @@ public class StartupRecoveryService {
         }
 
         log.info("Startup recovery complete - {} active platform(s) restored.", activeEpochs.size());
+    }
+
+    /**
+     * Resets every validator left {@code ACTIVE} by an unclean shutdown back to {@code INACTIVE}.
+     * Their WebSocket sessions died with the previous process without {@code afterConnectionClosed}
+     * running, and the handshake only admits {@code INACTIVE} validators, so without this reset
+     * they could never reconnect.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void recoverValidatorStatus() {
+        validatorService.resetStatuses();
     }
 }
