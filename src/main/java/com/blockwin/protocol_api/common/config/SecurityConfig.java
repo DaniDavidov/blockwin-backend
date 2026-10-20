@@ -51,6 +51,7 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(request -> request.requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/ws/connection").permitAll()
                         .requestMatchers("api/v1/validator/register").permitAll()
                         .requestMatchers("api/v1/validator/challenge").permitAll()
                         .requestMatchers("api/v1/validator/stake/verify").permitAll()
