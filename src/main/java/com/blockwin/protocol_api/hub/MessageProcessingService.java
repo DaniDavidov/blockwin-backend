@@ -122,17 +122,18 @@ public class MessageProcessingService {
         if (!(cachePlatformEvent.getSource() instanceof RewardService)) {
             return;
         }
-        long lastRoundTimestampSeconds = cachePlatformEvent.getValidationEndTimestamp().getEpochSecond();
-        long validationStartTimestampSeconds = cachePlatformEvent.getValidationStartTimestamp().getEpochSecond();
-        long interval = cachePlatformEvent.getCheckIntervalSeconds();
-        long lastRoundId = (lastRoundTimestampSeconds - validationStartTimestampSeconds) / interval;
+        long lastRoundId = RoundState.lastRoundId(
+                cachePlatformEvent.getValidationStartTimestamp(),
+                cachePlatformEvent.getValidationEndTimestamp(),
+                cachePlatformEvent.getCheckIntervalSeconds());
 
         RoundState state = new RoundState(
                 cachePlatformEvent.getPlatformId(),
                 cachePlatformEvent.getPlatformURL(),
                 cachePlatformEvent.getCheckIntervalSeconds(),
                 cachePlatformEvent.getValidationStartTimestamp(),
-                lastRoundId
+                lastRoundId,
+                cachePlatformEvent.getEpochId()
         );
         stateRegistry.registerState(state);
     }

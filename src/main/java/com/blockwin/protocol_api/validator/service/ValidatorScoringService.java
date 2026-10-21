@@ -70,7 +70,7 @@ public class ValidatorScoringService {
             ack.acknowledge();
             return;
         }
-        long epochId = EpochService.toEpochId(round.startTimestamp());
+        long epochId = round.epochId();
 
         Map<UUID, long[]> deltas = new HashMap<>();
         Map<EpochParticipationId, Long> participationIncrements = new HashMap<>();

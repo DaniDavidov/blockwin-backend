@@ -45,12 +45,13 @@ class ExecutedRoundSerializationTest {
                 List.of(report)
         );
         Instant start = Instant.parse("2026-10-20T12:00:00Z");
-        ExecutedRound round = new ExecutedRound(7, "http://localhost:4002", start, start.plusSeconds(30), List.of(result));
+        ExecutedRound round = new ExecutedRound(7, "http://localhost:4002", 202610201230L, start, start.plusSeconds(30), List.of(result));
 
         ExecutedRound decoded = roundTrip(round);
 
         assertEquals(7, decoded.roundId());
         assertEquals("http://localhost:4002", decoded.platformUrl());
+        assertEquals(202610201230L, decoded.epochId());
         assertEquals(start, decoded.startTimestamp());
         assertEquals(1, decoded.consensusResults().size());
 

@@ -43,10 +43,11 @@ class MessageProcessingServiceTest {
         Instant start = Instant.parse("2026-04-13T00:00:00Z");
         Instant end = start.plus(30, ChronoUnit.DAYS);
         long intervalSeconds = 30L;
-        long expectedLastRoundId = (end.getEpochSecond() - start.getEpochSecond()) / intervalSeconds;
+        long epochId = 202605130000L;
+        long expectedLastRoundId = (end.getEpochSecond() - start.getEpochSecond()) / intervalSeconds - 1;
 
         CachePlatformEvent event = new CachePlatformEvent(
-                rewardService, platformId, "example.com", intervalSeconds, start, end);
+                rewardService, platformId, "example.com", epochId, intervalSeconds, start, end);
 
         messageProcessingService.cachePlatform(event);
 
@@ -58,20 +59,21 @@ class MessageProcessingServiceTest {
         assertEquals(intervalSeconds, state.getCheckIntervalSeconds());
         assertEquals(start, state.getRegistrationTimestamp());
         assertEquals(expectedLastRoundId, state.getLastRoundId());
+        assertEquals(epochId, state.getEpochId());
         assertEquals(0L, state.getRoundId());
     }
 
     @Test
-    void cachePlatform_lastRoundId_isFloorOfDurationDividedByInterval() {
-        // 7-day validation period with a 3600-second interval:
-        // (7 * 86400) / 3600 = 20160 rounds exactly.
+    void cachePlatform_lastRoundId_lastWholeRoundEndsAtValidationEnd() {
+        // 10-minute validation period with a 30-second interval: 20 rounds, IDs 0..19,
+        // so round 19 expires exactly at the end of the period.
         Instant start = Instant.parse("2026-04-13T00:00:00Z");
-        Instant end = start.plus(7, ChronoUnit.DAYS);
+        Instant end = start.plus(10, ChronoUnit.MINUTES);
         long intervalSeconds = 30L;
-        long expectedLastRoundId = (7L * 86400L) / intervalSeconds;
+        long expectedLastRoundId = 19L;
 
         CachePlatformEvent event = new CachePlatformEvent(
-                rewardService, UUID.randomUUID(), "example.com", intervalSeconds, start, end);
+                rewardService, UUID.randomUUID(), "example.com", 202604130010L, intervalSeconds, start, end);
 
         messageProcessingService.cachePlatform(event);
 
@@ -83,7 +85,7 @@ class MessageProcessingServiceTest {
     @Test
     void cachePlatform_fromWrongSource_doesNotRegisterState() {
         CachePlatformEvent event = new CachePlatformEvent(
-                this, UUID.randomUUID(), "example.com", 30L,
+                this, UUID.randomUUID(), "example.com", 202605130000L, 30L,
                 Instant.now(), Instant.now().plus(30, ChronoUnit.DAYS));
 
         messageProcessingService.cachePlatform(event);

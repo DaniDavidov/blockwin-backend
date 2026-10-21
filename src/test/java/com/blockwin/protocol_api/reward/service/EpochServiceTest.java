@@ -32,39 +32,41 @@ class EpochServiceTest {
     private EpochService epochService;
 
     @Test
-    void toEpochId_shouldReturnYYYYMMDD() {
-        assertEquals(20260415L, EpochService.toEpochId(Instant.parse("2026-04-15T12:00:00Z")));
-        assertEquals(20261201L, EpochService.toEpochId(Instant.parse("2026-12-01T00:00:00Z")));
-        assertEquals(20260131L, EpochService.toEpochId(Instant.parse("2026-01-31T23:59:59Z")));
+    void toEpochId_shouldReturnYYYYMMDDHHmm() {
+        assertEquals(202604151200L, EpochService.toEpochId(Instant.parse("2026-04-15T12:00:00Z")));
+        assertEquals(202612010000L, EpochService.toEpochId(Instant.parse("2026-12-01T00:00:00Z")));
+        assertEquals(202601312359L, EpochService.toEpochId(Instant.parse("2026-01-31T23:59:59Z")));
     }
 
     @Test
-    void toEpochId_weeklyPeriodsWithinSameMonth_areDistinct() {
-        long week1 = EpochService.toEpochId(Instant.parse("2026-04-01T00:00:00Z"));
-        long week2 = EpochService.toEpochId(Instant.parse("2026-04-08T00:00:00Z"));
-        long week3 = EpochService.toEpochId(Instant.parse("2026-04-15T00:00:00Z"));
-        long week4 = EpochService.toEpochId(Instant.parse("2026-04-22T00:00:00Z"));
+    void toEpochId_shortPeriodsWithinSameDay_areDistinct() {
+        long first  = EpochService.toEpochId(Instant.parse("2026-04-01T10:15:00Z"));
+        long second = EpochService.toEpochId(Instant.parse("2026-04-01T10:16:00Z"));
+        long third  = EpochService.toEpochId(Instant.parse("2026-04-01T22:45:30Z"));
 
-        assertEquals(20260401L, week1);
-        assertEquals(20260408L, week2);
-        assertEquals(20260415L, week3);
-        assertEquals(20260422L, week4);
+        assertEquals(202604011015L, first);
+        assertEquals(202604011016L, second);
+        assertEquals(202604012245L, third);
     }
 
     @Test
     void toEpochId_boundaryAtMonthStart_isCorrect() {
-        assertEquals(20260401L, EpochService.toEpochId(Instant.parse("2026-04-01T00:00:00Z")));
+        assertEquals(202604010000L, EpochService.toEpochId(Instant.parse("2026-04-01T00:00:00Z")));
     }
 
     @Test
-    void getCurrentEpochId_shouldBeValidYYYYMMDDFormat() {
+    void getCurrentEpochId_shouldBeValidYYYYMMDDHHmmFormat() {
         long id = EpochService.getCurrentEpochId();
-        long year  = id / 10_000L;
-        long month = (id / 100L) % 100L;
-        long day   = id % 100L;
+        long year   = id / 100_000_000L;
+        long month  = (id / 1_000_000L) % 100L;
+        long day    = (id / 10_000L) % 100L;
+        long hour   = (id / 100L) % 100L;
+        long minute = id % 100L;
         assertTrue(year >= 2024 && year <= 2099, "Year out of expected range: " + year);
         assertTrue(month >= 1 && month <= 12,    "Month out of range: " + month);
         assertTrue(day >= 1 && day <= 31,        "Day out of range: " + day);
+        assertTrue(hour >= 0 && hour <= 23,      "Hour out of range: " + hour);
+        assertTrue(minute >= 0 && minute <= 59,  "Minute out of range: " + minute);
     }
 
     @Test
@@ -77,7 +79,7 @@ class EpochServiceTest {
     void recordParticipationBatch_issuesSingleBatchUpdateWithOneParamPerKey() {
         UUID v1 = UUID.randomUUID();
         UUID v2 = UUID.randomUUID();
-        long epochId = 20260401L;
+        long epochId = 202604010000L;
         Map<EpochParticipationId, Long> increments = new HashMap<>();
         increments.put(new EpochParticipationId(v1, "example.com", epochId), 1L);
         increments.put(new EpochParticipationId(v2, "example.com", epochId), 3L);

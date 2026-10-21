@@ -66,8 +66,8 @@ public class StartupRecoveryService {
             }
 
             long interval = platform.checkIntervalSeconds();
-            long lastRoundId = (epoch.validationEndTimestamp().getEpochSecond()
-                    - epoch.validationStartTimestamp().getEpochSecond()) / interval;
+            long lastRoundId = RoundState.lastRoundId(
+                    epoch.validationStartTimestamp(), epoch.validationEndTimestamp(), interval);
 
             Long lastCompleted = lastRoundIds.get(platform.url());
             long nextUncompleted = (lastCompleted != null) ? lastCompleted + 1 : 0L;
@@ -83,6 +83,7 @@ public class StartupRecoveryService {
                     interval,
                     epoch.validationStartTimestamp(),
                     lastRoundId,
+                    epoch.epochId(),
                     resumeRoundId,
                     slotStart
             );

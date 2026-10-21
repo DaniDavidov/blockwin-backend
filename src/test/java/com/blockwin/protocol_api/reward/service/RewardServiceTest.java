@@ -13,6 +13,7 @@ import com.blockwin.protocol_api.reward.model.PlatformEpochEntity;
 import com.blockwin.protocol_api.reward.model.PlatformEpochId;
 import com.blockwin.protocol_api.reward.model.dto.DepositRewardRequest;
 import com.blockwin.protocol_api.reward.model.dto.MerkleProofResponse;
+import com.blockwin.protocol_api.reward.model.enums.ValidationPeriodUnit;
 import com.blockwin.protocol_api.reward.repository.EpochParticipationRepository;
 import com.blockwin.protocol_api.reward.repository.PlatformEpochRepository;
 import com.blockwin.protocol_api.validator.model.enums.ChainName;
@@ -28,8 +29,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigInteger;
+import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -62,7 +63,7 @@ class RewardServiceTest {
     @BeforeEach
     void setUp() {
         platformId = UUID.randomUUID();
-        epochId = 20260401L;
+        epochId = 202604010000L;
         platform = PlatformEntity.builder()
                 .id(platformId)
                 .url("example.com")
@@ -342,7 +343,7 @@ class RewardServiceTest {
 
     @Test
     void verifyRewardDeposit_alreadyActive_throwsIllegalStateExceptionWithoutCallingBlockchain() {
-        DepositRewardRequest request = depositRequest(30);
+        DepositRewardRequest request = depositRequest(30, ValidationPeriodUnit.DAYS);
         when(signatureService.recoverSignerAddressUnchecked(any(), any())).thenReturn(OWNER_ADDRESS);
         when(platformRepository.findById(platformId)).thenReturn(Optional.of(platform));
         when(platformEpochRepository.existsByIdPlatformIdAndValidationEndTimestampAfter(
@@ -355,9 +356,7 @@ class RewardServiceTest {
     @Test
     void verifyRewardDeposit_happyPath_savesEntityWithCorrectFields() {
         BigInteger amount = BigInteger.valueOf(5_000_000);
-        int validationDays = 30;
-        DepositRewardRequest request = depositRequest(validationDays);
-        long expectedEpochId = EpochService.toEpochId(Instant.now().plus(validationDays, ChronoUnit.DAYS));
+        DepositRewardRequest request = depositRequest(30, ValidationPeriodUnit.DAYS);
 
         when(signatureService.recoverSignerAddressUnchecked(any(), any())).thenReturn(OWNER_ADDRESS);
         when(platformRepository.findById(platformId)).thenReturn(Optional.of(platform));
@@ -370,7 +369,9 @@ class RewardServiceTest {
         ArgumentCaptor<PlatformEpochEntity> captor = ArgumentCaptor.forClass(PlatformEpochEntity.class);
         verify(platformEpochRepository).save(captor.capture());
         PlatformEpochEntity saved = captor.getValue();
-        assertEquals(new PlatformEpochId(platformId, expectedEpochId), saved.getId());
+        assertEquals(new PlatformEpochId(platformId, EpochService.toEpochId(saved.getValidationEndTimestamp())), saved.getId());
+        assertEquals(Duration.ofDays(30),
+                Duration.between(saved.getValidationStartTimestamp(), saved.getValidationEndTimestamp()));
         assertEquals(amount, saved.getRewardPot());
         assertEquals(request.txHash(), saved.getDepositTxHash());
         assertFalse(saved.isPublished());
@@ -381,8 +382,7 @@ class RewardServiceTest {
 
     @Test
     void verifyRewardDeposit_happyPath_publishesCachePlatformEventWithCorrectFields() {
-        int validationDays = 30;
-        DepositRewardRequest request = depositRequest(validationDays);
+        DepositRewardRequest request = depositRequest(15, ValidationPeriodUnit.MINUTES);
 
         when(signatureService.recoverSignerAddressUnchecked(any(), any())).thenReturn(OWNER_ADDRESS);
         when(platformRepository.findById(platformId)).thenReturn(Optional.of(platform));
@@ -399,17 +399,18 @@ class RewardServiceTest {
         assertEquals(platformId, event.getPlatformId());
         assertEquals("example.com", event.getPlatformURL());
         assertEquals(platform.getCheckIntervalSeconds(), event.getCheckIntervalSeconds());
-        long expectedEndEpoch = Instant.now().plus(validationDays, ChronoUnit.DAYS).getEpochSecond();
-        long actualEndEpoch = event.getValidationEndTimestamp().getEpochSecond();
-        assertTrue(Math.abs(actualEndEpoch - expectedEndEpoch) < 5, "End timestamp should be ~30 days from now");
+        assertEquals(Duration.ofMinutes(15),
+                Duration.between(event.getValidationStartTimestamp(), event.getValidationEndTimestamp()));
+        assertEquals(EpochService.toEpochId(event.getValidationEndTimestamp()), event.getEpochId());
     }
 
-    private DepositRewardRequest depositRequest(int validationDays) {
+    private DepositRewardRequest depositRequest(long validationPeriod, ValidationPeriodUnit unit) {
         return new DepositRewardRequest(
                 "0x" + "d".repeat(64),
                 "ethereum",
                 OWNER_ADDRESS,
-                validationDays,
+                validationPeriod,
+                unit,
                 "0x" + "e".repeat(130)
         );
     }

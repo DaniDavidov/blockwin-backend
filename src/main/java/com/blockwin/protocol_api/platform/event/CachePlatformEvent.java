@@ -10,14 +10,16 @@ import java.util.UUID;
 public class CachePlatformEvent extends ApplicationEvent {
     private final UUID platformId;
     private final String platformURL;
+    private final long epochId;
     private final long checkIntervalSeconds;
     private final Instant validationStartTimestamp;
     private final Instant validationEndTimestamp;
 
-    public CachePlatformEvent(Object source, UUID platformId, String platformURL, long checkIntervalSeconds, Instant validationStartTimestamp, Instant validationEndTimestamp) {
+    public CachePlatformEvent(Object source, UUID platformId, String platformURL, long epochId, long checkIntervalSeconds, Instant validationStartTimestamp, Instant validationEndTimestamp) {
         super(source);
         this.platformId = platformId;
         this.platformURL = platformURL;
+        this.epochId = epochId;
         this.checkIntervalSeconds = checkIntervalSeconds;
         this.validationStartTimestamp = validationStartTimestamp;
         this.validationEndTimestamp = validationEndTimestamp;

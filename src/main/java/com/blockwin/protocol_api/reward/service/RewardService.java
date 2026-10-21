@@ -37,8 +37,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -66,6 +66,9 @@ import java.util.*;
 public class RewardService {
 
     private static final BigInteger GAS_LIMIT_PUBLISH = BigInteger.valueOf(120_000L);
+    // The lower bound keeps epoch IDs (minute granularity) unique per platform.
+    private static final Duration MIN_VALIDATION_PERIOD = Duration.ofMinutes(1);
+    private static final Duration MAX_VALIDATION_PERIOD = Duration.ofDays(365);
 
     private final PlatformRepository platformRepository;
     private final PlatformEpochRepository platformEpochRepository;
@@ -98,8 +101,13 @@ public class RewardService {
         PlatformEntity platform = platformRepository.findById(platformId)
                 .orElseThrow(() -> new IllegalArgumentException("Platform not found: " + platformId));
 
+        long interval = platform.getCheckIntervalSeconds();
+        Duration validationPeriod = resolveValidationPeriod(request, interval);
+
         Instant validationStartTimestamp = Instant.now();
-        Instant validationEndTimestamp = validationStartTimestamp.plus(request.validationDays(), ChronoUnit.DAYS);
+        // Truncate to whole rounds so the last round expires exactly at the end of the period.
+        long rounds = validationPeriod.getSeconds() / interval;
+        Instant validationEndTimestamp = validationStartTimestamp.plusSeconds(rounds * interval);
         long epochId = EpochService.toEpochId(validationEndTimestamp);
         PlatformEpochId epochKey = new PlatformEpochId(platformId, epochId);
 
@@ -125,7 +133,8 @@ public class RewardService {
                 this,
                 platformId,
                 platform.getUrl(),
-                platform.getCheckIntervalSeconds(),
+                epochId,
+                interval,
                 validationStartTimestamp,
                 validationEndTimestamp
         );
@@ -133,6 +142,38 @@ public class RewardService {
 
         log.info("Reward pot deposited: platformId={} epochId={} amount={} txHash={}",
                 platformId, epochId, verifiedAmount, request.txHash());
+    }
+
+    /**
+     * Converts the requested validation period to a {@link Duration} and checks it is between
+     * {@code max(MIN_VALIDATION_PERIOD, one check interval)} and {@link #MAX_VALIDATION_PERIOD}.
+     *
+     * @throws IllegalArgumentException if the period is missing or out of bounds
+     */
+    private Duration resolveValidationPeriod(DepositRewardRequest request, long checkIntervalSeconds) {
+        if (request.validationPeriodUnit() == null || request.validationPeriod() <= 0) {
+            throw new IllegalArgumentException(
+                    "validationPeriod must be positive and validationPeriodUnit one of MINUTES, HOURS, DAYS");
+        }
+        IllegalArgumentException tooLong = new IllegalArgumentException(
+                "Validation period must not exceed " + MAX_VALIDATION_PERIOD.toDays() + " days");
+        Duration period;
+        try {
+            period = request.validationPeriodUnit().toDuration(request.validationPeriod());
+        } catch (ArithmeticException e) {
+            throw tooLong;
+        }
+        if (period.compareTo(MAX_VALIDATION_PERIOD) > 0) {
+            throw tooLong;
+        }
+        // Shorter than one check interval would leave the period without a single round.
+        Duration minimum = Duration.ofSeconds(Math.max(MIN_VALIDATION_PERIOD.getSeconds(), checkIntervalSeconds));
+        if (period.compareTo(minimum) < 0) {
+            throw new IllegalArgumentException(
+                    "Validation period must be at least " + minimum.getSeconds()
+                            + " seconds (one minute and one check interval of the platform)");
+        }
+        return period;
     }
 
     /**
