@@ -19,9 +19,10 @@ import java.util.UUID;
 /**
  * Manages epoch lifecycle and validator participation tracking.
  *
- * <p>Epoch ID format: {@code YYYYMMDD} (e.g. {@code 20260401} for 1 April 2026).
- * Day granularity keeps IDs human-readable and supports multiple validation
- * periods within the same calendar month (e.g. four weekly epochs).
+ * <p>Epoch ID format: {@code YYYYMMDDHHmm} in UTC (e.g. {@code 202604011530} for 1 April 2026,
+ * 15:30). Minute granularity keeps IDs human-readable and unique per platform: validation
+ * periods of one platform never overlap and last at least a minute, so no two end in the same
+ * minute.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -39,17 +40,18 @@ public class EpochService {
     private final NamedParameterJdbcTemplate jdbc;
 
     /**
-     * Derives the epoch ID (YYYYMMDD) from an arbitrary instant in UTC.
+     * Derives the epoch ID (YYYYMMDDHHmm) from an arbitrary instant in UTC.
      *
-     * <p>Day granularity supports sub-monthly validation periods (e.g. four
-     * consecutive weekly epochs within the same calendar month all receive
-     * distinct IDs: 20260401, 20260408, 20260415, 20260422).
+     * <p>Called once per validation period, on its end timestamp, when the reward deposit is
+     * verified. Everything downstream carries that ID instead of re-deriving it.
      */
     public static long toEpochId(Instant timestamp) {
         var dt = timestamp.atZone(ZoneOffset.UTC);
-        return (long) dt.getYear() * 10_000L
-                + (long) dt.getMonthValue() * 100L
-                + dt.getDayOfMonth();
+        return (long) dt.getYear() * 100_000_000L
+                + (long) dt.getMonthValue() * 1_000_000L
+                + (long) dt.getDayOfMonth() * 10_000L
+                + (long) dt.getHour() * 100L
+                + dt.getMinute();
     }
 
     /**
@@ -69,6 +71,7 @@ public class EpochService {
                 .stream()
                 .map(e -> new ActiveEpoch(
                         e.getId().getPlatformId(),
+                        e.getId().getEpochId(),
                         e.getValidationStartTimestamp(),
                         e.getValidationEndTimestamp()))
                 .toList();

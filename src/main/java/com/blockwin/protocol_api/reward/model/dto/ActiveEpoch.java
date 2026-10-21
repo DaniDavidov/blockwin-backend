@@ -5,5 +5,6 @@ import java.util.UUID;
 
 public record ActiveEpoch(
         UUID platformId,
+        long epochId,
         Instant validationStartTimestamp,
         Instant validationEndTimestamp) {}

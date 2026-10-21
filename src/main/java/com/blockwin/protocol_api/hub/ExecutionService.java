@@ -5,7 +5,6 @@ import com.blockwin.protocol_api.consensus.model.ConsensusResult;
 import com.blockwin.protocol_api.hub.model.ExecutedRound;
 import com.blockwin.protocol_api.hub.model.RoundState;
 import com.blockwin.protocol_api.platform.event.PlatformUpdateEvent;
-import com.blockwin.protocol_api.reward.service.EpochService;
 import com.blockwin.protocol_api.reward.service.RewardService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -58,7 +57,7 @@ public class ExecutionService {
         stateUpdateRegistry.removeUpdate(roundState.getPlatformURL());
 
         UUID platformId = roundState.getPlatformId();
-        long epochId = EpochService.toEpochId(roundState.getExpiration());
+        long epochId = roundState.getEpochId();
         try {
             rewardService.closeEpoch(platformId, epochId);
             log.info("Epoch closed: platform={} epochId={}", roundState.getPlatformURL(), epochId);
@@ -86,6 +85,7 @@ public class ExecutionService {
                     roundState.getCheckIntervalSeconds(),
                     roundState.getRegistrationTimestamp(),
                     roundState.getLastRoundId(),
+                    roundState.getEpochId(),
                     nextRoundId,
                     nextStart
             );
@@ -97,6 +97,7 @@ public class ExecutionService {
                     update.getCheckIntervalSeconds(),
                     roundState.getRegistrationTimestamp(),
                     roundState.getLastRoundId(),
+                    roundState.getEpochId(),
                     nextRoundId,
                     nextStart
             );
@@ -125,6 +126,7 @@ public class ExecutionService {
                     ExecutedRound executedRound = new ExecutedRound(
                             roundState.getRoundId(),
                             roundState.getPlatformURL(),
+                            roundState.getEpochId(),
                             roundState.getStartTimestamp(),
                             roundState.getExpiration(),
                             consensusResults

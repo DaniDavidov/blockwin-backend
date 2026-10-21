@@ -65,7 +65,7 @@ class HealthAggregationServiceTest {
 
     private ExecutedRound executedRound(long roundId, UptimeConsensusResult result) {
         Instant start = Instant.parse("2026-10-20T12:00:00Z");
-        return new ExecutedRound(roundId, PLATFORM_URL, start, start.plusSeconds(30), List.of(result));
+        return new ExecutedRound(roundId, PLATFORM_URL, 202610201230L, start, start.plusSeconds(30), List.of(result));
     }
 
     private UptimeConsensusResult uptimeResult() {
