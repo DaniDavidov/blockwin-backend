@@ -53,12 +53,12 @@ import java.util.*;
  *   <li><b>publishRoot</b>  — Admin submits the root to the reward smart contract
  *       ({@code publishRoot(bytes32,uint256,bytes32)}).</li>
  *   <li><b>getMerkleProof</b> — Validator requests the leaf data and Merkle proof
- *       needed to call {@code claim()} on the contract.</li>
+ *       needed to call {@code claimReward()} on the contract.</li>
  * </ol>
  *
  * <h2>Leaf encoding</h2>
- * {@code keccak256(abi.encodePacked(bytes32 websiteId, uint256 epochId, address validatorAddress, uint256 rewardAmount))}
- * — 116 bytes packed, matching the contract's claim verification.
+ * OpenZeppelin {@code StandardMerkleTree} format, matching the contract's {@code claimReward} verification:
+ * {@code keccak256(bytes.concat(keccak256(abi.encode(address validatorAddress, bytes32 websiteId, uint256 epochId, uint256 rewardAmount))))}
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -341,7 +341,8 @@ public class RewardService {
      * leaf inputs and proof path for the given validator address.
      *
      * <p>The validator passes this data directly to the contract's
-     * {@code claim(bytes32 websiteId, uint256 epochId, uint256 rewardAmount, bytes32[] proof)}.
+     * {@code claimReward(bytes32 platformId, uint256 epoch, uint256 amount, bytes32[] proof)},
+     * sending the transaction from {@code validatorAddress} (the contract uses {@code msg.sender} in the leaf).
      */
     public MerkleProofResponse getMerkleProof(UUID platformId, long epochId, String validatorAddress) {
         PlatformEntity platform = platformRepository.findById(platformId)
@@ -395,38 +396,40 @@ public class RewardService {
     }
 
     /**
-     * Builds a Merkle leaf:
-     * {@code keccak256(abi.encodePacked(bytes32 websiteId, uint256 epochId, address validatorAddress, uint256 rewardAmount))}
+     * Builds a Merkle leaf in OpenZeppelin {@code StandardMerkleTree} format, matching the
+     * contract's {@code claimReward} verification:
+     * {@code keccak256(bytes.concat(keccak256(abi.encode(address validatorAddress, bytes32 websiteId, uint256 epochId, uint256 rewardAmount))))}
      *
-     * <p>Packed layout (116 bytes):
+     * <p>{@code abi.encode} layout (128 bytes, every field padded to 32 bytes):
      * <pre>
-     *   [0..31]  websiteId       bytes32
-     *   [32..63] epochId         uint256 (big-endian)
-     *   [64..83] validatorAddress address (20 bytes, no padding in packed mode)
-     *   [84..115] rewardAmount   uint256 (big-endian)
+     *   [0..31]    validatorAddress address (20 bytes, left-padded with zeros)
+     *   [32..63]   websiteId        bytes32
+     *   [64..95]   epochId          uint256 (big-endian)
+     *   [96..127]  rewardAmount     uint256 (big-endian)
      * </pre>
+     * The second hash ensures a 64-byte internal node can never be passed off as a leaf.
      */
-    private byte[] computeLeaf(byte[] websiteId32, long epochId, String validatorAddress, BigInteger rewardAmount) {
-        byte[] packed = new byte[116];
+    byte[] computeLeaf(byte[] websiteId32, long epochId, String validatorAddress, BigInteger rewardAmount) {
+        byte[] encoded = new byte[128];
 
-        // bytes32 websiteId
-        System.arraycopy(websiteId32, 0, packed, 0, 32);
-
-        // uint256 epochId
-        byte[] epochBytes = toUint256(BigInteger.valueOf(epochId));
-        System.arraycopy(epochBytes, 0, packed, 32, 32);
-
-        // address validatorAddress (20 bytes, no padding)
+        // address validatorAddress (20 bytes, right-aligned in its 32-byte word)
         String cleanAddr = validatorAddress.startsWith("0x") || validatorAddress.startsWith("0X")
                              ? validatorAddress.substring(2) : validatorAddress;
         byte[] addrBytes = Numeric.hexStringToByteArray(cleanAddr);
-        System.arraycopy(addrBytes, 0, packed, 64, 20);
+        System.arraycopy(addrBytes, 0, encoded, 12, 20);
+
+        // bytes32 websiteId
+        System.arraycopy(websiteId32, 0, encoded, 32, 32);
+
+        // uint256 epochId
+        byte[] epochBytes = toUint256(BigInteger.valueOf(epochId));
+        System.arraycopy(epochBytes, 0, encoded, 64, 32);
 
         // uint256 rewardAmount
         byte[] rewardBytes = toUint256(rewardAmount);
-        System.arraycopy(rewardBytes, 0, packed, 84, 32);
+        System.arraycopy(rewardBytes, 0, encoded, 96, 32);
 
-        return Hash.sha3(packed);
+        return Hash.sha3(Hash.sha3(encoded));
     }
 
     /**

@@ -27,11 +27,21 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.web3j.abi.TypeEncoder;
+import org.web3j.abi.datatypes.Address;
+import org.web3j.abi.datatypes.generated.Bytes32;
+import org.web3j.abi.datatypes.generated.Uint256;
+import org.web3j.crypto.Hash;
+import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -298,6 +308,68 @@ class RewardServiceTest {
         assertEquals(closedEpoch().getMerkleRoot(), response.merkleRoot());
         assertNotNull(response.proof());
         assertTrue(response.websiteId().startsWith("0x"));
+    }
+
+    @Test
+    void computeLeaf_matchesContractClaimRewardEncoding() {
+        // Expected value computed independently with the contract's formula for a real claim on Anvil:
+        // keccak256(bytes.concat(keccak256(abi.encode(msg.sender, platformId, epoch, amount))))
+        byte[] platformId32 = Numeric.hexStringToByteArray(
+                "0x75181c38e50441508bf851f0d69b01cd00000000000000000000000000000000");
+
+        byte[] leaf = rewardService.computeLeaf(
+                platformId32, 202610211108L, "0x90F79bf6EB2c4f870365E785982E1f101E93b906", BigInteger.valueOf(20_000_000));
+
+        assertEquals("0x7231b3199e6fd8fc2a87cfd73641e6fae53c494f2e4ef7d75343a75b7bcd67f5", Numeric.toHexString(leaf));
+    }
+
+    @Test
+    void closeEpochThenGetMerkleProof_everyProofVerifiesLikeTheContract() {
+        Map<UUID, String> addresses = new LinkedHashMap<>();
+        addresses.put(UUID.randomUUID(), "0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
+        addresses.put(UUID.randomUUID(), "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC");
+        addresses.put(UUID.randomUUID(), "0x90F79bf6EB2c4f870365E785982E1f101E93b906");
+        List<EpochParticipationEntity> participations = new ArrayList<>();
+        long rounds = 10;
+        for (Map.Entry<UUID, String> e : addresses.entrySet()) {
+            participations.add(participation(e.getKey(), rounds++));
+            when(validatorService.getEthAddress(e.getKey(), ChainName.ETHEREUM)).thenReturn(Optional.of(e.getValue()));
+            when(validatorService.getReputationBps(e.getKey())).thenReturn(5000);
+        }
+        PlatformEpochEntity epoch = openEpoch(BigInteger.valueOf(1_000_000));
+        when(platformRepository.findById(platformId)).thenReturn(Optional.of(platform));
+        when(platformEpochRepository.findById(new PlatformEpochId(platformId, epochId))).thenReturn(Optional.of(epoch));
+        when(epochParticipationRepository.findByIdPlatformUrlAndIdEpochId("example.com", epochId)).thenReturn(participations);
+
+        rewardService.closeEpoch(platformId, epochId);
+
+        for (String address : addresses.values()) {
+            MerkleProofResponse response = rewardService.getMerkleProof(platformId, epochId, address);
+            byte[] node = contractLeaf(address, response.websiteId(), epochId, new BigInteger(response.rewardAmount()));
+            for (String sibling : response.proof()) {
+                node = hashSortedPair(node, Numeric.hexStringToByteArray(sibling));
+            }
+            assertEquals(epoch.getMerkleRoot(), Numeric.toHexString(node), "proof for " + address + " must reach the root");
+        }
+    }
+
+    /** Mirrors {@code claimReward}'s leaf, using web3j's ABI encoder rather than the production code. */
+    private static byte[] contractLeaf(String address, String platformId32, long epoch, BigInteger amount) {
+        String encoded = TypeEncoder.encode(new Address(address))
+                + TypeEncoder.encode(new Bytes32(Numeric.hexStringToByteArray(platformId32)))
+                + TypeEncoder.encode(new Uint256(BigInteger.valueOf(epoch)))
+                + TypeEncoder.encode(new Uint256(amount));
+        return Hash.sha3(Hash.sha3(Numeric.hexStringToByteArray(encoded)));
+    }
+
+    /** OpenZeppelin {@code MerkleProof} commutative pair hash. */
+    private static byte[] hashSortedPair(byte[] a, byte[] b) {
+        byte[] first = Arrays.compareUnsigned(a, b) <= 0 ? a : b;
+        byte[] second = first == a ? b : a;
+        byte[] concat = new byte[64];
+        System.arraycopy(first, 0, concat, 0, 32);
+        System.arraycopy(second, 0, concat, 32, 32);
+        return Hash.sha3(concat);
     }
 
     @Test

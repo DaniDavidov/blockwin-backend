@@ -50,7 +50,7 @@ public class RewardController {
     public ResponseEntity<Map<String, String>> publishRoot(
             @PathVariable UUID platformId,
             @PathVariable long epochId,
-            @RequestParam(defaultValue = "ethereum") String chain) {
+            @RequestParam(defaultValue = "ETHEREUM") String chain) {
         try {
             String txHash = rewardService.publishRoot(platformId, epochId, chain);
             return ResponseEntity.ok(Map.of("txHash", txHash));
